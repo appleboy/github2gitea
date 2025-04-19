@@ -61,6 +61,8 @@ func (g *gitea) init() error {
 
 	opts := []gsdk.ClientOption{
 		gsdk.SetToken(g.token),
+		gsdk.SetContext(g.ctx),
+		gsdk.SetUserAgent("github2gitea"),
 	}
 
 	if g.skipVerify {
