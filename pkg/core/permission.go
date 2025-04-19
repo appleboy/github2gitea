@@ -1,13 +1,36 @@
 package core
 
+import gsdk "code.gitea.io/sdk/gitea"
+
 const (
-	// project permission
-	ProjectAdmin = "PROJECT_ADMIN"
-	ProjectWrite = "PROJECT_WRITE"
-	ProjectRead  = "PROJECT_READ"
-	// repo permission
-	RepoAdmin  = "REPO_ADMIN"
-	RepoWrite  = "REPO_WRITE"
-	RepoRead   = "REPO_READ"
-	RepoCreate = "REPO_CREATE"
+	// Gitea permissions
+	GiteaRepoAdmin    = "admin"
+	GiteaRepoWrite    = "write"
+	GiteaRepoRead     = "read"
+	GiteaProjectAdmin = "admin"
+	GiteaProjectWrite = "write"
+	GiteaProjectRead  = "read"
+	GiteaRepoCreate   = "create"
+
+	// Bitbucket permissions
+	BitbucketProjectAdmin = "PROJECT_ADMIN"
+	BitbucketProjectWrite = "PROJECT_WRITE"
+	BitbucketProjectRead  = "PROJECT_READ"
+	BitbucketRepoAdmin    = "REPO_ADMIN"
+	BitbucketRepoWrite    = "REPO_WRITE"
+	BitbucketRepoRead     = "REPO_READ"
+	BitbucketRepoCreate   = "REPO_CREATE"
 )
+
+var DefaultUnits = []gsdk.RepoUnitType{
+	gsdk.RepoUnitCode,
+	gsdk.RepoUnitIssues,
+	gsdk.RepoUnitExtIssues,
+	gsdk.RepoUnitExtWiki,
+	gsdk.RepoUnitPackages,
+	gsdk.RepoUnitProjects,
+	gsdk.RepoUnitPulls,
+	gsdk.RepoUnitReleases,
+	gsdk.RepoUnitWiki,
+	gsdk.RepoUnitActions,
+}

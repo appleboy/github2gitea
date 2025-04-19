@@ -13,19 +13,6 @@ import (
 	gsdk "code.gitea.io/sdk/gitea"
 )
 
-var defaultUnits = []gsdk.RepoUnitType{
-	gsdk.RepoUnitCode,
-	gsdk.RepoUnitIssues,
-	gsdk.RepoUnitExtIssues,
-	gsdk.RepoUnitExtWiki,
-	gsdk.RepoUnitPackages,
-	gsdk.RepoUnitProjects,
-	gsdk.RepoUnitPulls,
-	gsdk.RepoUnitReleases,
-	gsdk.RepoUnitWiki,
-	gsdk.RepoUnitActions,
-}
-
 type Config struct {
 	Server     string
 	Token      string
@@ -80,7 +67,7 @@ func (g *gitea) init() error {
 		// add new http client for skip verify
 		httpClient := &http.Client{
 			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint:gosec
 			},
 		}
 		opts = append(opts, gsdk.SetHTTPClient(httpClient))
@@ -202,11 +189,11 @@ func (g *gitea) CreateOrGetUser(opts CreateUserOption) (*gsdk.User, error) {
 func (g *gitea) AddCollaborator(org, repo, user, permission string) (*gsdk.Response, error) {
 	var access gsdk.AccessMode
 	switch permission {
-	case core.RepoAdmin:
+	case core.GiteaRepoAdmin:
 		access = gsdk.AccessModeAdmin
-	case core.RepoWrite:
+	case core.GiteaRepoWrite:
 		access = gsdk.AccessModeWrite
-	case core.RepoRead:
+	case core.GiteaRepoRead:
 		access = gsdk.AccessModeRead
 	default:
 		return nil, errors.New("permission mode invalid")
@@ -220,39 +207,39 @@ func (g *gitea) AddCollaborator(org, repo, user, permission string) (*gsdk.Respo
 func (g *gitea) CreateOrGetTeam(org, permission string) (*gsdk.Team, error) {
 	var opt gsdk.CreateTeamOption
 	switch permission {
-	case core.ProjectAdmin:
+	case core.GiteaProjectAdmin:
 		opt = gsdk.CreateTeamOption{
 			Name:                    "OrgAdmin",
 			Description:             "OrgAdmin",
 			Permission:              gsdk.AccessModeAdmin,
 			IncludesAllRepositories: true,
 			CanCreateOrgRepo:        true,
-			Units:                   defaultUnits,
+			Units:                   core.DefaultUnits,
 		}
-	case core.ProjectWrite:
+	case core.GiteaProjectWrite:
 		opt = gsdk.CreateTeamOption{
 			Name:                    "OrgWriter",
 			Description:             "OrgWriter",
 			Permission:              gsdk.AccessModeWrite,
 			IncludesAllRepositories: true,
-			Units:                   defaultUnits,
+			Units:                   core.DefaultUnits,
 		}
-	case core.ProjectRead:
+	case core.GiteaProjectRead:
 		opt = gsdk.CreateTeamOption{
 			Name:                    "OrgReader",
 			Description:             "OrgReader",
 			Permission:              gsdk.AccessModeRead,
 			IncludesAllRepositories: true,
-			Units:                   defaultUnits,
+			Units:                   core.DefaultUnits,
 		}
-	case core.RepoCreate:
+	case core.GiteaRepoCreate:
 		opt = gsdk.CreateTeamOption{
 			Name:                    "RepoCreator",
 			Description:             "RepoCreator",
 			Permission:              gsdk.AccessModeRead,
 			IncludesAllRepositories: false,
 			CanCreateOrgRepo:        true,
-			Units:                   defaultUnits,
+			Units:                   core.DefaultUnits,
 		}
 	default:
 		return nil, errors.New("permission mode invalid")
