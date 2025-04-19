@@ -1,6 +1,6 @@
 # github2gitea
 
-A CLI tool to migrate GitHub repositories (from organizations or personal accounts) to a Gitea platform, built with Golang. This project leverages the GitHub and Gitea SDKs for seamless repository transfer.
+A [CLI](https://en.wikipedia.org/wiki/Command-line_interface) tool to migrate [GitHub](https://github.com/) repositories (from organizations or personal accounts) to a [Gitea](https://about.gitea.com/) platform, built with [Golang](https://go.dev/). This project leverages the [GitHub](https://github.com/) and [Gitea](https://pkg.go.dev/code.gitea.io/sdk/gitea) SDKs for seamless repository transfer.
 
 ## Contributing
 
@@ -13,4 +13,4 @@ Contributions are welcome! Please open issues or submit pull requests for improv
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the [MIT License](https://opensource.org/licenses/MIT). See the [LICENSE](LICENSE) file for details.
