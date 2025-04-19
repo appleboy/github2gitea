@@ -33,7 +33,6 @@ jobs:
           version: v2.0
           args: --verbose
 
-jobs:
   test:
     strategy:
       matrix:
