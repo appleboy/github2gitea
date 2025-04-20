@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -12,6 +13,17 @@ import (
 
 	gsdk "code.gitea.io/sdk/gitea"
 )
+
+// GiteaError is a custom error type for Gitea operations.
+type GiteaError struct {
+	Operation string
+	Code      int
+	Message   string
+}
+
+func (e *GiteaError) Error() string {
+	return fmt.Sprintf("gitea %s failed: [%d] %s", e.Operation, e.Code, e.Message)
+}
 
 type Config struct {
 	Server     string
@@ -23,6 +35,10 @@ type Config struct {
 
 // NewGitea creates a new instance of the gitea struct.
 func New(ctx context.Context, cfg *Config) (*Client, error) {
+	if cfg.Server == "" || !(strings.HasPrefix(cfg.Server, "http://") || strings.HasPrefix(cfg.Server, "https://")) {
+		return nil, errors.New("invalid gitea server: must start with http:// or https://")
+	}
+
 	g := &Client{
 		ctx:        ctx,
 		server:     cfg.Server,
@@ -113,8 +129,10 @@ func (g *Client) CreateAndGetOrg(opts CreateOrgOption) (*gsdk.Organization, erro
 				Visibility:  visible,
 			})
 			if err != nil {
-				return nil, err
+				return nil, &GiteaError{Operation: "create_org", Code: response.StatusCode, Message: err.Error()}
 			}
+		} else if response != nil {
+			return nil, &GiteaError{Operation: "get_org", Code: response.StatusCode, Message: err.Error()}
 		} else {
 			return nil, err
 		}
@@ -177,8 +195,11 @@ func (g *Client) CreateOrGetUser(opts CreateUserOption) (*gsdk.User, error) {
 		if g.logger != nil {
 			g.logger.Warn("get user info failed", "username", opts.Username, "err", err)
 		}
+		if resp != nil && resp.StatusCode != http.StatusNotFound {
+			return nil, &GiteaError{Operation: "get_user_info", Code: resp.StatusCode, Message: err.Error()}
+		}
 	}
-	if resp.StatusCode == http.StatusNotFound {
+	if resp != nil && resp.StatusCode == http.StatusNotFound {
 		mustChangePassword := false
 		user, _, err = g.client.AdminCreateUser(gsdk.CreateUserOption{
 			SourceID:           opts.SourceID,
@@ -189,7 +210,7 @@ func (g *Client) CreateOrGetUser(opts CreateUserOption) (*gsdk.User, error) {
 			MustChangePassword: &mustChangePassword,
 		})
 		if err != nil {
-			return nil, err
+			return nil, &GiteaError{Operation: "admin_create_user", Code: http.StatusInternalServerError, Message: err.Error()}
 		}
 		if g.logger != nil {
 			g.logger.Info(
