@@ -104,6 +104,44 @@ func (c *Client) ListRepoUsers(ctx context.Context, owner, repo string) ([]*gith
 	return allUsers, nil
 }
 
+// ListOrgTeams lists all teams in an organization
+func (c *Client) ListOrgTeams(ctx context.Context, org string) ([]*github.Team, error) {
+	opts := &github.ListOptions{PerPage: 100}
+	var allTeams []*github.Team
+	for {
+		teams, resp, err := c.gh.Teams.ListTeams(ctx, org, opts)
+		if err != nil {
+			return nil, err
+		}
+		allTeams = append(allTeams, teams...)
+		if resp.NextPage == 0 {
+			break
+		}
+		opts.Page = resp.NextPage
+	}
+	return allTeams, nil
+}
+
+// ListOrgTeamsMembers lists all members in a team
+func (c *Client) ListOrgTeamsMembers(ctx context.Context, org string, slug string) ([]*github.User, error) {
+	opts := &github.TeamListTeamMembersOptions{
+		ListOptions: github.ListOptions{PerPage: 100},
+	}
+	var allMembers []*github.User
+	for {
+		members, resp, err := c.gh.Teams.ListTeamMembersBySlug(ctx, org, slug, opts)
+		if err != nil {
+			return nil, err
+		}
+		allMembers = append(allMembers, members...)
+		if resp.NextPage == 0 {
+			break
+		}
+		opts.Page = resp.NextPage
+	}
+	return allMembers, nil
+}
+
 // ListOrgUsers lists all members in an organization
 func (c *Client) ListOrgUsers(ctx context.Context, org string) ([]*github.User, error) {
 	opts := &github.ListMembersOptions{

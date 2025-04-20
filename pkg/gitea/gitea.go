@@ -22,8 +22,8 @@ type Config struct {
 }
 
 // NewGitea creates a new instance of the gitea struct.
-func NewGitea(ctx context.Context, cfg *Config) (*gitea, error) {
-	g := &gitea{
+func New(ctx context.Context, cfg *Config) (*Client, error) {
+	g := &Client{
 		ctx:        ctx,
 		server:     cfg.Server,
 		token:      cfg.Token,
@@ -41,7 +41,7 @@ func NewGitea(ctx context.Context, cfg *Config) (*gitea, error) {
 }
 
 // gitea is a struct that holds the gitea client.
-type gitea struct {
+type Client struct {
 	ctx        context.Context
 	server     string
 	token      string
@@ -52,7 +52,7 @@ type gitea struct {
 }
 
 // init initializes the gitea client.
-func (g *gitea) init() error {
+func (g *Client) init() error {
 	if g.server == "" || g.token == "" {
 		return errors.New("missing gitea server or token")
 	}
@@ -85,7 +85,7 @@ func (g *gitea) init() error {
 }
 
 // GetCurrentUser gets the current authenticated user's information
-func (g *gitea) GetCurrentUser() (*gsdk.User, error) {
+func (g *Client) GetCurrentUser() (*gsdk.User, error) {
 	user, _, err := g.client.GetMyUserInfo()
 	if err != nil {
 		return nil, err
@@ -101,7 +101,7 @@ type CreateOrgOption struct {
 }
 
 // CreateAndGetOrg creates or retrieves an organization, handling error cases properly
-func (g *gitea) CreateAndGetOrg(opts CreateOrgOption) (*gsdk.Organization, error) {
+func (g *Client) CreateAndGetOrg(opts CreateOrgOption) (*gsdk.Organization, error) {
 	newOrg, response, err := g.client.GetOrg(opts.Name)
 	if err != nil {
 		// Handle 404 case by creating the organization
@@ -135,7 +135,7 @@ type MigrateRepoOption struct {
 }
 
 // MigrateRepo migrate repository
-func (g *gitea) MigrateRepo(opts MigrateRepoOption) (*gsdk.Repository, error) {
+func (g *Client) MigrateRepo(opts MigrateRepoOption) (*gsdk.Repository, error) {
 	if opts.RepoName == "" || opts.RepoOwner == "" || opts.CloneAddr == "" {
 		return nil, errors.New("missing required migration parameters: RepoName, RepoOwner and CloneAddr are required")
 	}
@@ -164,7 +164,7 @@ type CreateUserOption struct {
 }
 
 // CreateOrGetUser create or get user
-func (g *gitea) CreateOrGetUser(opts CreateUserOption) (*gsdk.User, error) {
+func (g *Client) CreateOrGetUser(opts CreateUserOption) (*gsdk.User, error) {
 	user, resp, err := g.client.GetUserInfo(opts.Username)
 	if err != nil {
 		if g.logger != nil {
@@ -197,7 +197,7 @@ func (g *gitea) CreateOrGetUser(opts CreateUserOption) (*gsdk.User, error) {
 }
 
 // AddCollaborator add collaborator
-func (g *gitea) AddCollaborator(org, repo, user, permission string) (*gsdk.Response, error) {
+func (g *Client) AddCollaborator(org, repo, user, permission string) (*gsdk.Response, error) {
 	var access gsdk.AccessMode
 	switch permission {
 	case core.GiteaRepoAdmin:
@@ -215,7 +215,7 @@ func (g *gitea) AddCollaborator(org, repo, user, permission string) (*gsdk.Respo
 }
 
 // CreateOrGetTeam create team
-func (g *gitea) CreateOrGetTeam(org, permission string) (*gsdk.Team, error) {
+func (g *Client) CreateOrGetTeam(org, permission string) (*gsdk.Team, error) {
 	var opt gsdk.CreateTeamOption
 	switch permission {
 	case core.GiteaProjectAdmin:
@@ -276,7 +276,7 @@ func (g *gitea) CreateOrGetTeam(org, permission string) (*gsdk.Team, error) {
 }
 
 // AddTeamMember add team member
-func (g *gitea) AddTeamMember(id int64, user string) error {
+func (g *Client) AddTeamMember(id int64, user string) error {
 	_, err := g.client.AddTeamMember(id, user)
 	return err
 }
