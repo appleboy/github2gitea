@@ -1,5 +1,7 @@
 package gitea
 
+// Package gitea provides a client and helper functions for interacting with a Gitea server.
+
 import (
 	"context"
 	"crypto/tls"
@@ -16,24 +18,34 @@ import (
 
 // GiteaError is a custom error type for Gitea operations.
 type GiteaError struct {
+	// Operation is the name of the Gitea operation that failed.
 	Operation string
-	Code      int
-	Message   string
+	// Code is the HTTP status code returned by the Gitea server.
+	Code int
+	// Message is the error message returned by the Gitea server.
+	Message string
 }
 
 func (e *GiteaError) Error() string {
+	// Error implements the error interface for GiteaError.
 	return fmt.Sprintf("gitea %s failed: [%d] %s", e.Operation, e.Code, e.Message)
 }
 
 type Config struct {
-	Server     string
-	Token      string
+	// Server is the Gitea server URL.
+	Server string
+	// Token is the personal access token for authentication.
+	Token string
+	// SkipVerify determines whether to skip TLS certificate verification.
 	SkipVerify bool
-	SourceID   int64
-	Logger     *slog.Logger
+	// SourceID is the authentication source ID for user creation.
+	SourceID int64
+	// Logger is the logger instance for logging.
+	Logger *slog.Logger
 }
 
-// NewGitea creates a new instance of the gitea struct.
+// New creates a new Gitea client with the provided configuration and context.
+// Returns a pointer to the Client and an error if initialization fails.
 func New(ctx context.Context, cfg *Config) (*Client, error) {
 	if cfg.Server == "" || !(strings.HasPrefix(cfg.Server, "http://") || strings.HasPrefix(cfg.Server, "https://")) {
 		return nil, errors.New("invalid gitea server: must start with http:// or https://")
@@ -56,7 +68,7 @@ func New(ctx context.Context, cfg *Config) (*Client, error) {
 	return g, nil
 }
 
-// gitea is a struct that holds the gitea client.
+// Client represents a Gitea client instance for interacting with the Gitea API.
 type Client struct {
 	ctx        context.Context
 	server     string
@@ -67,7 +79,8 @@ type Client struct {
 	logger     *slog.Logger
 }
 
-// init initializes the gitea client.
+// init initializes the underlying Gitea SDK client.
+// Returns an error if the server or token is missing, or if client creation fails.
 func (g *Client) init() error {
 	if g.server == "" || g.token == "" {
 		return errors.New("missing gitea server or token")
@@ -100,7 +113,8 @@ func (g *Client) init() error {
 	return nil
 }
 
-// GetCurrentUser gets the current authenticated user's information
+// GetCurrentUser retrieves the current authenticated user's information from Gitea.
+// Returns a pointer to the User and an error if the request fails.
 func (g *Client) GetCurrentUser() (*gsdk.User, error) {
 	user, _, err := g.client.GetMyUserInfo()
 	if err != nil {
@@ -109,14 +123,18 @@ func (g *Client) GetCurrentUser() (*gsdk.User, error) {
 	return user, nil
 }
 
-// CreateOrgOption create organization option
+// CreateOrgOption contains options for creating a Gitea organization.
 type CreateOrgOption struct {
-	Name        string
+	// Name is the organization name.
+	Name string
+	// Description is the organization description.
 	Description string
-	Visibility  gsdk.VisibleType
+	// Visibility sets the visibility of the organization.
+	Visibility gsdk.VisibleType
 }
 
-// CreateAndGetOrg creates or retrieves an organization, handling error cases properly
+// CreateAndGetOrg retrieves an existing organization or creates a new one if it does not exist.
+// Returns a pointer to the Organization and an error if the operation fails.
 func (g *Client) CreateAndGetOrg(opts CreateOrgOption) (*gsdk.Organization, error) {
 	newOrg, response, err := g.client.GetOrg(opts.Name)
 	if err != nil {
@@ -141,18 +159,26 @@ func (g *Client) CreateAndGetOrg(opts CreateOrgOption) (*gsdk.Organization, erro
 	return newOrg, nil
 }
 
-// MigrateRepoOption migrate repository option
+// MigrateRepoOption contains options for migrating a repository to Gitea.
 type MigrateRepoOption struct {
-	RepoName     string
-	RepoOwner    string
-	CloneAddr    string
-	Private      bool
-	Description  string
+	// RepoName is the name of the repository to create.
+	RepoName string
+	// RepoOwner is the owner (user or org) of the new repository.
+	RepoOwner string
+	// CloneAddr is the source repository clone URL.
+	CloneAddr string
+	// Private determines if the new repository is private.
+	Private bool
+	// Description is the repository description.
+	Description string
+	// AuthUsername is the username for authentication to the source repository.
 	AuthUsername string
-	AuthToken    string
+	// AuthToken is the token/password for authentication to the source repository.
+	AuthToken string
 }
 
-// MigrateRepo migrate repository
+// MigrateRepo migrates a repository from a remote source to Gitea.
+// Returns a pointer to the new Repository and an error if the migration fails.
 func (g *Client) MigrateRepo(opts MigrateRepoOption) (*gsdk.Repository, error) {
 	if opts.RepoName == "" || opts.RepoOwner == "" || opts.CloneAddr == "" {
 		return nil, errors.New("missing required migration parameters: RepoName, RepoOwner and CloneAddr are required")
@@ -180,15 +206,22 @@ func (g *Client) MigrateRepo(opts MigrateRepoOption) (*gsdk.Repository, error) {
 	return newRepo, nil
 }
 
+// CreateUserOption contains options for creating a Gitea user.
 type CreateUserOption struct {
-	SourceID  int64
+	// SourceID is the authentication source ID.
+	SourceID int64
+	// LoginName is the login name for the user.
 	LoginName string
-	Username  string
-	FullName  string
-	Email     string
+	// Username is the username for the user.
+	Username string
+	// FullName is the full name of the user.
+	FullName string
+	// Email is the email address of the user.
+	Email string
 }
 
-// CreateOrGetUser create or get user
+// CreateOrGetUser retrieves an existing user or creates a new one if not found.
+// Returns a pointer to the User and an error if the operation fails.
 func (g *Client) CreateOrGetUser(opts CreateUserOption) (*gsdk.User, error) {
 	user, resp, err := g.client.GetUserInfo(opts.Username)
 	if err != nil {
@@ -224,7 +257,8 @@ func (g *Client) CreateOrGetUser(opts CreateUserOption) (*gsdk.User, error) {
 	return user, nil
 }
 
-// AddCollaborator add collaborator
+// AddCollaborator adds a user as a collaborator to the specified repository with the given permissions.
+// Returns the response and an error if the operation fails.
 func (g *Client) AddCollaborator(org, repo, user string, permission map[string]bool) (*gsdk.Response, error) {
 	var access gsdk.AccessMode
 	switch {
@@ -245,13 +279,18 @@ func (g *Client) AddCollaborator(org, repo, user string, permission map[string]b
 	})
 }
 
+// CreateTeamOption contains options for creating a Gitea team.
 type CreateTeamOption struct {
-	Name        string
+	// Name is the team name.
+	Name string
+	// Description is the team description.
 	Description string
-	Permission  string
+	// Permission is the permission level for the team.
+	Permission string
 }
 
-// CreateOrGetTeam create team
+// CreateOrGetTeam retrieves an existing team or creates a new one in the specified organization.
+// Returns a pointer to the Team and an error if the operation fails.
 func (g *Client) CreateOrGetTeam(org string, opts CreateTeamOption) (*gsdk.Team, error) {
 	opt := gsdk.CreateTeamOption{
 		Name:        opts.Name,
@@ -294,7 +333,8 @@ func (g *Client) CreateOrGetTeam(org string, opts CreateTeamOption) (*gsdk.Team,
 	return team, nil
 }
 
-// AddTeamMember add team member
+// AddTeamMember adds a user to the specified team by team ID.
+// Returns an error if the operation fails.
 func (g *Client) AddTeamMember(id int64, user string) error {
 	_, err := g.client.AddTeamMember(id, user)
 	return err
