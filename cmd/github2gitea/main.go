@@ -130,9 +130,18 @@ func main() {
 	}
 
 	for _, repo := range ghRepos {
-		logger.Info("github repo",
-			"name", convert.FromPtr(repo.Name),
-			"full_name", convert.FromPtr(repo.FullName),
-		)
+		// create new gitea repository
+		err = m.MigrateNewRepo(migrate.MigrateNewRepoOption{
+			Owner:        convert.FromPtr(repo.Owner.Login),
+			Name:         convert.FromPtr(repo.Name),
+			CloneAddr:    convert.FromPtr(repo.CloneURL),
+			Description:  convert.FromPtr(repo.Description),
+			Private:      convert.FromPtr(repo.Private),
+			AuthUsername: convert.FromPtr(ghUser.Login),
+			AuthToken:    convert.FromPtr(ghToken),
+		})
+		if err != nil {
+			logger.Error("migration repository error", "error", err)
+		}
 	}
 }

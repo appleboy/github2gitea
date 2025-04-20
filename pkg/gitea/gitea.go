@@ -131,7 +131,7 @@ type MigrateRepoOption struct {
 	Private      bool
 	Description  string
 	AuthUsername string
-	AuthPassword string
+	AuthToken    string
 }
 
 // MigrateRepo migrate repository
@@ -146,7 +146,14 @@ func (g *Client) MigrateRepo(opts MigrateRepoOption) (*gsdk.Repository, error) {
 		Private:      opts.Private,
 		Description:  opts.Description,
 		AuthUsername: opts.AuthUsername,
-		AuthPassword: opts.AuthPassword,
+		AuthToken:    opts.AuthToken,
+		Service:      gsdk.GitServiceGithub,
+		Wiki:         true,
+		Milestones:   true,
+		Issues:       true,
+		Releases:     true,
+		Labels:       true,
+		PullRequests: true,
 	})
 	if err != nil {
 		return nil, err

@@ -170,3 +170,39 @@ func (m *migrate) CreateNewOrg(ctx context.Context, opts CreateNewOrgOption) (*g
 	}
 	return org, nil
 }
+
+// MigrateNewRepoOption migrate repository option
+type MigrateNewRepoOption struct {
+	Owner        string
+	Name         string
+	CloneAddr    string
+	Description  string
+	Private      bool
+	Permission   map[string][]string
+	AuthUsername string
+	AuthToken    string
+}
+
+// MigrateNewRepo migrate repository
+func (m *migrate) MigrateNewRepo(opts MigrateNewRepoOption) error {
+	m.logger.Info("start migrate repo",
+		"owner", opts.Owner,
+		"name", opts.Name,
+	)
+	_, err := m.gtClient.MigrateRepo(gitea.MigrateRepoOption{
+		RepoName:     opts.Name,
+		RepoOwner:    opts.Owner,
+		CloneAddr:    opts.CloneAddr,
+		Private:      opts.Private,
+		Description:  opts.Description,
+		AuthUsername: opts.AuthUsername,
+		AuthToken:    opts.AuthToken,
+	})
+	if err != nil {
+		return err
+	}
+
+	// TODO: Add Repo Collaborators
+
+	return nil
+}
