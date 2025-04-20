@@ -25,9 +25,16 @@ func main() {
 	apiTimeout := flag.String("timeout", "1m", "Timeout for requests")
 	sourceOrg := flag.String("source-org", "", "Source organization name")
 	targetOrg := flag.String("target-org", "", "Target organization name")
+	debug := flag.Bool("debug", false, "Enable debug logging")
 	flag.Parse()
 
-	logger := slog.New(slog.NewTextHandler(log.Writer(), nil))
+	logLevel := slog.LevelInfo
+	if convert.FromPtr(debug) {
+		logLevel = slog.LevelDebug
+	}
+	logger := slog.New(slog.NewTextHandler(log.Writer(), &slog.HandlerOptions{
+		Level: logLevel,
+	}))
 
 	sourceOrgName := convert.FromPtr(sourceOrg)
 	targetOrgName := convert.FromPtr(targetOrg)
@@ -77,7 +84,6 @@ func main() {
 		return
 	}
 	logger.Info("github user", "login", convert.FromPtr(ghUser.Login))
-	logger.Info("github user", "id", convert.FromPtr(ghUser.ID))
 	logger.Info("github user", "name", convert.FromPtr(ghUser.Name))
 	logger.Info("github user", "email", convert.FromPtr(ghUser.Email))
 
@@ -124,10 +130,9 @@ func main() {
 	}
 
 	for _, repo := range ghRepos {
-		logger.Info("github repo", "name", convert.FromPtr(repo.Name))
-		logger.Info("github repo", "id", convert.FromPtr(repo.ID))
-		logger.Info("github repo", "owner", convert.FromPtr(repo.Owner.Login))
-		logger.Info("github repo", "owner_id", convert.FromPtr(repo.Owner.ID))
-		logger.Info("github repo", "owner_name", convert.FromPtr(repo.Owner.Name))
+		logger.Info("github repo",
+			"name", convert.FromPtr(repo.Name),
+			"full_name", convert.FromPtr(repo.FullName),
+		)
 	}
 }
