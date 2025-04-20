@@ -113,6 +113,26 @@ func (c *Client) ListRepoUsers(ctx context.Context, owner, repo string) ([]*gith
 	return allUsers, nil
 }
 
+// ListRepoCollaborators lists all collaborators in a repository
+func (c *Client) ListRepoCollaborators(ctx context.Context, owner, repo string) ([]*github.User, error) {
+	opts := &github.ListCollaboratorsOptions{
+		ListOptions: github.ListOptions{PerPage: 100},
+	}
+	var allUsers []*github.User
+	for {
+		users, resp, err := c.gh.Repositories.ListCollaborators(ctx, owner, repo, opts)
+		if err != nil {
+			return nil, err
+		}
+		allUsers = append(allUsers, users...)
+		if resp.NextPage == 0 {
+			break
+		}
+		opts.Page = resp.NextPage
+	}
+	return allUsers, nil
+}
+
 // ListOrgTeams lists all teams in an organization
 // permission can be one of: "pull", "triage", "push", "maintain", "admin"
 func (c *Client) ListOrgTeams(ctx context.Context, org string) ([]*github.Team, error) {

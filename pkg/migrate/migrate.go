@@ -3,6 +3,7 @@ package migrate
 import (
 	"context"
 	"log/slog"
+	"regexp"
 
 	"github.com/appleboy/com/convert"
 	"github.com/appleboy/github2gitea/pkg/gitea"
@@ -115,12 +116,15 @@ func (m *migrate) CreateNewOrg(ctx context.Context, opts CreateNewOrgOption) (*g
 	// get github organization teams
 	ghTeams, err := m.ghClient.ListOrgTeams(ctx, opts.Name)
 	if err != nil {
-		return nil, err
 	}
 	// create gitea organization teams
+	// Define a regular expression to match characters not allowed in AlphaDashDot
+	invalidCharsRegex := regexp.MustCompile(`[^a-zA-Z0-9\-_\.]`)
 	for _, ghTeam := range ghTeams {
+		// Sanitize the team name
+		sanitizedTeamName := invalidCharsRegex.ReplaceAllString(convert.FromPtr(ghTeam.Name), "_")
 		team, err := m.gtClient.CreateOrGetTeam(opts.Name, gitea.CreateTeamOption{
-			Name:        convert.FromPtr(ghTeam.Name),
+			Name:        sanitizedTeamName,
 			Description: convert.FromPtr(ghTeam.Description),
 			Permission:  convert.FromPtr(ghTeam.Permission),
 		})
@@ -183,7 +187,7 @@ type MigrateNewRepoOption struct {
 }
 
 // MigrateNewRepo migrate repository
-func (m *migrate) MigrateNewRepo(opts MigrateNewRepoOption) error {
+func (m *migrate) MigrateNewRepo(ctx context.Context, opts MigrateNewRepoOption) error {
 	m.logger.Info("start migrate repo",
 		"owner", opts.Owner,
 		"name", opts.Name,
@@ -201,7 +205,49 @@ func (m *migrate) MigrateNewRepo(opts MigrateNewRepoOption) error {
 		return err
 	}
 
-	// TODO: Add Repo Collaborators
+	// List collaborators
+	ghUsers, err := m.ghClient.ListRepoCollaborators(ctx, opts.Owner, opts.Name)
+	if err != nil {
+		return err
+	}
+
+	for _, ghUser := range ghUsers {
+		if *ghUser.Type != "User" {
+			m.logger.Debug(
+				"skip github user type",
+				"name", convert.FromPtr(ghUser.Login),
+				"type", convert.FromPtr(ghUser.Type),
+			)
+			continue
+		}
+
+		// get github user
+		ghUser, err := m.ghClient.GetUser(ctx, convert.FromPtr(ghUser.Login))
+		if err != nil {
+			m.logger.Error(
+				"failed to get github user",
+				"name", convert.FromPtr(ghUser.Login),
+				"error", err,
+			)
+			continue
+		}
+
+		// add gitea collaborator
+		_, err = m.gtClient.AddCollaborator(opts.Owner, opts.Name, *ghUser.Login, ghUser.Permissions)
+		if err != nil {
+			m.logger.Error(
+				"failed to add gitea repo collaborator",
+				"name", convert.FromPtr(ghUser.Login),
+				"error", err,
+			)
+			continue
+		}
+	}
+
+	m.logger.Info("migrate repo success",
+		"owner", opts.Owner,
+		"name", opts.Name,
+	)
 
 	return nil
 }

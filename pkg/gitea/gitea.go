@@ -204,17 +204,20 @@ func (g *Client) CreateOrGetUser(opts CreateUserOption) (*gsdk.User, error) {
 }
 
 // AddCollaborator add collaborator
-func (g *Client) AddCollaborator(org, repo, user, permission string) (*gsdk.Response, error) {
+func (g *Client) AddCollaborator(org, repo, user string, permission map[string]bool) (*gsdk.Response, error) {
 	var access gsdk.AccessMode
-	switch permission {
-	case core.GiteaRepoAdmin:
+	switch {
+	case permission[core.GitHubTeamAdmin]:
 		access = gsdk.AccessModeAdmin
-	case core.GiteaRepoWrite:
+	case permission[core.GitHubTeamMaintain]:
+		access = gsdk.AccessModeOwner
+	case permission[core.GitHubTeamPush]:
 		access = gsdk.AccessModeWrite
-	case core.GiteaRepoRead:
+	case permission[core.GitHubTeamPull]:
 		access = gsdk.AccessModeRead
 	default:
-		return nil, errors.New("permission mode invalid")
+		// Default to read access if no specific permission is set or recognized
+		access = gsdk.AccessModeRead
 	}
 	return g.client.AddCollaborator(org, repo, user, gsdk.AddCollaboratorOption{
 		Permission: &access,

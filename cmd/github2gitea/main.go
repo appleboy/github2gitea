@@ -131,7 +131,7 @@ func main() {
 
 	for _, repo := range ghRepos {
 		// create new gitea repository
-		err = m.MigrateNewRepo(migrate.MigrateNewRepoOption{
+		err = m.MigrateNewRepo(ctx, migrate.MigrateNewRepoOption{
 			Owner:        convert.FromPtr(repo.Owner.Login),
 			Name:         convert.FromPtr(repo.Name),
 			CloneAddr:    convert.FromPtr(repo.CloneURL),
