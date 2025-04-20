@@ -20,11 +20,11 @@ type Config struct {
 // Client wraps the GitHub client with additional methods
 type Client struct {
 	logger *slog.Logger
-	GH     *github.Client // 導出字段供外部使用
+	gh     *github.Client
 }
 
 // NewClient creates a new GitHub Client
-func NewClient(cfg *Config) *Client {
+func NewClient(cfg *Config) (*Client, error) {
 	var err error
 	httpClient := &http.Client{
 		Timeout: 10 * time.Second,
@@ -46,19 +46,28 @@ func NewClient(cfg *Config) *Client {
 		)
 		if err != nil {
 			cfg.Logger.Error("failed to create GitHub client", "error", err)
-			return nil
+			return nil, err
 		}
 	}
 
 	return &Client{
-		GH:     ghClient,
+		gh:     ghClient,
 		logger: cfg.Logger,
+	}, nil
+}
+
+// GetCurrentUser gets the current authenticated user's information
+func (c *Client) GetCurrentUser(ctx context.Context) (*github.User, error) {
+	user, _, err := c.gh.Users.Get(ctx, "")
+	if err != nil {
+		return nil, err
 	}
+	return user, nil
 }
 
 // GetUserPermissionFromRepo gets a user's permission level for a repository
 func (c *Client) GetUserPermissionFromRepo(ctx context.Context, owner, repo, username string) (string, error) {
-	permission, _, err := c.GH.Repositories.GetPermissionLevel(ctx, owner, repo, username)
+	permission, _, err := c.gh.Repositories.GetPermissionLevel(ctx, owner, repo, username)
 	if err != nil {
 		return "", err
 	}
@@ -67,7 +76,7 @@ func (c *Client) GetUserPermissionFromRepo(ctx context.Context, owner, repo, use
 
 // GetUserPermissionFromOrg gets a user's permission level in an organization
 func (c *Client) GetUserPermissionFromOrg(ctx context.Context, org, username string) (string, error) {
-	membership, _, err := c.GH.Organizations.GetOrgMembership(ctx, username, org)
+	membership, _, err := c.gh.Organizations.GetOrgMembership(ctx, username, org)
 	if err != nil {
 		return "", err
 	}
@@ -82,7 +91,7 @@ func (c *Client) ListRepoUsers(ctx context.Context, owner, repo string) ([]*gith
 
 	var allUsers []*github.User
 	for {
-		users, resp, err := c.GH.Repositories.ListCollaborators(ctx, owner, repo, opts)
+		users, resp, err := c.gh.Repositories.ListCollaborators(ctx, owner, repo, opts)
 		if err != nil {
 			return nil, err
 		}
@@ -103,7 +112,7 @@ func (c *Client) ListOrgUsers(ctx context.Context, org string) ([]*github.User, 
 
 	var allUsers []*github.User
 	for {
-		users, resp, err := c.GH.Organizations.ListMembers(ctx, org, opts)
+		users, resp, err := c.gh.Organizations.ListMembers(ctx, org, opts)
 		if err != nil {
 			return nil, err
 		}
@@ -124,7 +133,7 @@ func (c *Client) ListOrgRepos(ctx context.Context, org string) ([]*github.Reposi
 
 	var allRepos []*github.Repository
 	for {
-		repos, resp, err := c.GH.Repositories.ListByOrg(ctx, org, opts)
+		repos, resp, err := c.gh.Repositories.ListByOrg(ctx, org, opts)
 		if err != nil {
 			return nil, err
 		}
@@ -139,12 +148,12 @@ func (c *Client) ListOrgRepos(ctx context.Context, org string) ([]*github.Reposi
 
 // GetRepo gets a single repository's information
 func (c *Client) GetRepo(ctx context.Context, owner, repo string) (*github.Repository, error) {
-	repository, _, err := c.GH.Repositories.Get(ctx, owner, repo)
+	repository, _, err := c.gh.Repositories.Get(ctx, owner, repo)
 	return repository, err
 }
 
 // GetOrg gets a single organization's information
 func (c *Client) GetOrg(ctx context.Context, org string) (*github.Organization, error) {
-	organization, _, err := c.GH.Organizations.Get(ctx, org)
+	organization, _, err := c.gh.Organizations.Get(ctx, org)
 	return organization, err
 }

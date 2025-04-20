@@ -84,6 +84,15 @@ func (g *gitea) init() error {
 	return nil
 }
 
+// GetCurrentUser gets the current authenticated user's information
+func (g *gitea) GetCurrentUser() (*gsdk.User, error) {
+	user, _, err := g.client.GetMyUserInfo()
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
 // CreateOrgOption create organization option
 type CreateOrgOption struct {
 	Name        string
