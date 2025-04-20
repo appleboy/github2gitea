@@ -32,7 +32,7 @@ func NewClient(cfg *Config) (*Client, error) {
 
 	if cfg.SkipVerify {
 		httpClient.Transport = &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint:gosec
 		}
 	}
 
