@@ -87,7 +87,13 @@ go build -o github2gitea cmd/github2gitea/main.go
    - 描述
    - 可見性（公開/私有）
    - Clone URLs
-5. 單一儲存庫錯誤時不中斷，持續遷移其他儲存庫
+   - Wiki
+   - 問題（Issues）
+   - 合併請求（Pull requests）
+   - 發行版本（Releases）
+   - 標籤（Labels）
+   - 里程碑（Milestones）
+5. 針對每個儲存庫處理錯誤，並持續遷移其他儲存庫
 
 ## 貢獻方式
 

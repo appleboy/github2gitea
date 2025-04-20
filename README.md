@@ -87,6 +87,12 @@ Enterprise GitHub Server migration:
    - Description
    - Visibility (public/private)
    - Clone URLs
+   - Wiki
+   - Issues
+   - Pull requests
+   - Releases
+   - Labels
+   - Milestones
 5. Handles errors per-repository while continuing migration
 
 ## Contributing
