@@ -22,7 +22,7 @@ func main() {
 	gtToken := flag.String("gt-token", "", "Gitea Personal Access Token")
 	gtSkipVerify := flag.Bool("gt-skip-verify", false, "Skip TLS verification for Gitea")
 	gtSourceID := flag.Int64("gt-source-id", 0, "Gitea Source ID")
-	apiTimeout := flag.String("timeout", "1m", "Timeout for requests")
+	apiTimeout := flag.String("timeout", "10m", "Timeout for requests")
 	sourceOrg := flag.String("source-org", "", "Source organization name")
 	targetOrg := flag.String("target-org", "", "Target organization name")
 	debug := flag.Bool("debug", false, "Enable debug logging")
