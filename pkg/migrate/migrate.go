@@ -116,6 +116,7 @@ func (m *migrate) CreateNewOrg(ctx context.Context, opts CreateNewOrgOption) (*g
 	// get github organization teams
 	ghTeams, err := m.ghClient.ListOrgTeams(ctx, opts.Name)
 	if err != nil {
+		return nil, err
 	}
 	// create gitea organization teams
 	// Define a regular expression to match characters not allowed in AlphaDashDot
