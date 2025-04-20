@@ -1,5 +1,7 @@
 # github2gitea
 
+[繁體中文](README.zh-TW.md) | [简体中文](README.zh-CN.md)
+
 [![Lint and Testing](https://github.com/appleboy/github2gitea/actions/workflows/testing.yml/badge.svg)](https://github.com/appleboy/github2gitea/actions/workflows/testing.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/appleboy/github2gitea)](https://goreportcard.com/report/github.com/appleboy/github2gitea)
 
