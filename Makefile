@@ -17,13 +17,22 @@ else
 endif
 COMMIT ?= $(shell git rev-parse --short HEAD)
 
-build: $(EXECUTABLE)
+all: $(EXECUTABLE) ## Default target
+	@echo "Build $(EXECUTABLE) with version $(VERSION) and commit $(COMMIT)"
+
+.PHONY: help
+help: ## Print this help message.
+	@echo "Usage: make [target]"
+	@echo ""
+	@echo "Targets:"
+	@echo ""
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
 $(EXECUTABLE): $(GOFILES)
 	$(GO) build -v -tags '$(TAGS)' -ldflags '$(EXTLDFLAGS)-s -w $(LDFLAGS)' -o bin/$@ ./cmd/$(EXECUTABLE)
 
-install: $(GOFILES)
+install: $(GOFILES) ## Install the binary
 	$(GO) install -v -tags '$(TAGS)' -ldflags '$(EXTLDFLAGS)-s -w $(LDFLAGS)'
 
-test:
+test: ## Run tests
 	@$(GO) test -v -cover -coverprofile coverage.txt ./... && echo "\n==>\033[32m Ok\033[m\n" || exit 1
