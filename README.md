@@ -5,13 +5,26 @@
 
 A [CLI](https://en.wikipedia.org/wiki/Command-line_interface) tool to migrate [GitHub](https://github.com/) repositories (from organizations or personal accounts) to a [Gitea](https://about.gitea.com/) platform, built with [Golang](https://go.dev/). This project leverages the [GitHub](https://github.com/) and [Gitea](https://pkg.go.dev/code.gitea.io/sdk/gitea) SDKs for seamless repository transfer.
 
+## Table of Contents
+
+- [github2gitea](#github2gitea)
+  - [Table of Contents](#table-of-contents)
+  - [Usage](#usage)
+    - [Prerequisites](#prerequisites)
+    - [Installation](#installation)
+    - [Command-Line Options](#command-line-options)
+    - [Example Commands](#example-commands)
+    - [Migration Process](#migration-process)
+  - [Contributing](#contributing)
+  - [License](#license)
+
 ## Usage
 
 ### Prerequisites
 
 - GitHub Personal Access Token with `repo` and `admin:org` scopes
 - Gitea Personal Access Token with `write:organization` and `write:repository` permissions
-- Go 1.20+ (if building from source)
+- Go 1.24+ (if building from source)
 
 ### Installation
 
