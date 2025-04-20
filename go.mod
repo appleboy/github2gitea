@@ -4,6 +4,7 @@ go 1.24
 
 require (
 	code.gitea.io/sdk/gitea v0.21.0
+	github.com/appleboy/com v0.3.0
 	github.com/google/go-github/v71 v71.0.0
 )
 
@@ -15,4 +16,5 @@ require (
 	github.com/hashicorp/go-version v1.7.0 // indirect
 	golang.org/x/crypto v0.33.0 // indirect
 	golang.org/x/sys v0.30.0 // indirect
+	golang.org/x/text v0.22.0 // indirect
 )
