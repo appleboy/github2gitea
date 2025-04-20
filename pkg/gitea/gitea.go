@@ -229,9 +229,7 @@ type CreateTeamOption struct {
 
 // CreateOrGetTeam create team
 func (g *Client) CreateOrGetTeam(org string, opts CreateTeamOption) (*gsdk.Team, error) {
-	var opt gsdk.CreateTeamOption
-
-	opt = gsdk.CreateTeamOption{
+	opt := gsdk.CreateTeamOption{
 		Name:        opts.Name,
 		Description: opts.Description,
 		Permission:  gsdk.AccessMode(opts.Permission),

@@ -61,7 +61,6 @@ func (m *migrate) CreateNewOrg(ctx context.Context, opts CreateNewOrgOption) (*g
 	}
 	// create gitea organization members
 	for _, ghUser := range ghUsers {
-
 		// get github user
 		ghUser, err := m.ghClient.GetUser(ctx, convert.FromPtr(ghUser.Login))
 		if err != nil {
