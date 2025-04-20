@@ -12,14 +12,11 @@ const (
 	GiteaProjectRead  = "read"
 	GiteaRepoCreate   = "create"
 
-	// Bitbucket permissions
-	BitbucketProjectAdmin = "PROJECT_ADMIN"
-	BitbucketProjectWrite = "PROJECT_WRITE"
-	BitbucketProjectRead  = "PROJECT_READ"
-	BitbucketRepoAdmin    = "REPO_ADMIN"
-	BitbucketRepoWrite    = "REPO_WRITE"
-	BitbucketRepoRead     = "REPO_READ"
-	BitbucketRepoCreate   = "REPO_CREATE"
+	GitHubTeamPull     = "pull"
+	GitHubTeamPush     = "push"
+	GitHubTeamAdmin    = "admin"
+	GitHubTeamMaintain = "maintain"
+	GitHubTeamTriager  = "triager"
 )
 
 var DefaultUnits = []gsdk.RepoUnitType{

@@ -1,8 +1,10 @@
 package migrate
 
 import (
+	"context"
 	"log/slog"
 
+	"github.com/appleboy/com/convert"
 	"github.com/appleboy/github2gitea/pkg/gitea"
 	"github.com/appleboy/github2gitea/pkg/github"
 
@@ -29,10 +31,11 @@ type CreateNewOrgOption struct {
 	Description string
 	Public      bool
 	Permission  map[string][]string
+	SoucreID    int64
 }
 
 // CreateNewOrg create new organization
-func (m *migrate) CreateNewOrg(opts CreateNewOrgOption) error {
+func (m *migrate) CreateNewOrg(ctx context.Context, opts CreateNewOrgOption) (*gsdk.Organization, error) {
 	visibility := gsdk.VisibleTypePrivate
 	switch opts.Public {
 	case true:
@@ -42,27 +45,128 @@ func (m *migrate) CreateNewOrg(opts CreateNewOrgOption) error {
 	}
 
 	m.logger.Info("start create organization", "name", opts.Name)
-	_, err := m.gtClient.CreateAndGetOrg(gitea.CreateOrgOption{
+	org, err := m.gtClient.CreateAndGetOrg(gitea.CreateOrgOption{
 		Name:        opts.Name,
 		Description: opts.Description,
 		Visibility:  visibility,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	m.logger.Info("start migrate organization permission", "name", opts.Name)
-	for permission, users := range opts.Permission {
-		team, err := m.gtClient.CreateOrGetTeam(opts.Name, permission)
+	// get github organization members
+	ghUsers, err := m.ghClient.ListOrgUsers(ctx, opts.Name)
+	if err != nil {
+		return nil, err
+	}
+	// create gitea organization members
+	for _, ghUser := range ghUsers {
+
+		// get github user
+		ghUser, err := m.ghClient.GetUser(ctx, convert.FromPtr(ghUser.Login))
 		if err != nil {
-			return err
+			m.logger.Error(
+				"failed to get github user",
+				"name", convert.FromPtr(ghUser.Login),
+				"error", err,
+			)
+			continue
 		}
-		for _, user := range users {
-			err := m.gtClient.AddTeamMember(team.ID, user)
+
+		// create gitea user
+		gtUser, err := m.gtClient.CreateOrGetUser(gitea.CreateUserOption{
+			LoginName: convert.FromPtr(ghUser.Login),
+			Username:  convert.FromPtr(ghUser.Login),
+			FullName:  convert.FromPtr(ghUser.Name),
+			Email:     convert.FromPtr(ghUser.Email),
+			SourceID:  opts.SoucreID,
+		})
+		if err != nil {
+			m.logger.Error(
+				"failed to create gitea user",
+				"name", convert.FromPtr(ghUser.Login),
+				"error", err,
+			)
+			continue
+		}
+		m.logger.Debug(
+			"create gitea user",
+			"name", convert.FromPtr(ghUser.Login),
+			"email", convert.FromPtr(ghUser.Email),
+			"full_name", convert.FromPtr(ghUser.Name),
+		)
+
+		// get github user permission from org
+		permission, err := m.ghClient.GetUserPermissionFromOrg(ctx, opts.Name, gtUser.LoginName)
+		if err != nil {
+			m.logger.Error(
+				"failed to get github user permission",
+				"name", convert.FromPtr(ghUser.Login),
+				"error", err,
+			)
+			continue
+		}
+		m.logger.Debug(
+			"get github user permission",
+			"name", convert.FromPtr(ghUser.Login),
+			"permission", permission,
+		)
+	}
+
+	// get github organization teams
+	ghTeams, err := m.ghClient.ListOrgTeams(ctx, opts.Name)
+	if err != nil {
+		return nil, err
+	}
+	// create gitea organization teams
+	for _, ghTeam := range ghTeams {
+		team, err := m.gtClient.CreateOrGetTeam(opts.Name, gitea.CreateTeamOption{
+			Name:        convert.FromPtr(ghTeam.Name),
+			Description: convert.FromPtr(ghTeam.Description),
+			Permission:  convert.FromPtr(ghTeam.Permission),
+		})
+		if err != nil {
+			m.logger.Error(
+				"failed to create gitea team",
+				"name", convert.FromPtr(ghTeam.Name),
+				"error", err,
+			)
+			continue
+		}
+		m.logger.Debug(
+			"create gitea team",
+			"name", convert.FromPtr(ghTeam.Name),
+			"permission", convert.FromPtr(ghTeam.Permission),
+		)
+
+		// get github team members
+		ghUsers, err := m.ghClient.ListOrgTeamsMembers(ctx, opts.Name, *ghTeam.Slug)
+		if err != nil {
+			m.logger.Error(
+				"failed to get github team members",
+				"name", convert.FromPtr(ghTeam.Name),
+				"error", err,
+			)
+			continue
+		}
+		// add gitea team members
+		for _, ghUser := range ghUsers {
+			err := m.gtClient.AddTeamMember(team.ID, convert.FromPtr(ghUser.Login))
 			if err != nil {
-				return err
+				m.logger.Error(
+					"failed to add gitea team member",
+					"name", convert.FromPtr(ghTeam.Name),
+					"user", convert.FromPtr(ghUser.Login),
+					"error", err,
+				)
+				continue
 			}
+			m.logger.Debug(
+				"add gitea team member",
+				"name", convert.FromPtr(ghTeam.Name),
+				"user", convert.FromPtr(ghUser.Login),
+			)
 		}
 	}
-	return nil
+	return org, nil
 }

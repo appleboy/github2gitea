@@ -7,9 +7,11 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/appleboy/com/convert"
-	"github.com/appleboy/github2gitea/pkg/gitea"
+	gt "github.com/appleboy/github2gitea/pkg/gitea"
 	gh "github.com/appleboy/github2gitea/pkg/github"
+	"github.com/appleboy/github2gitea/pkg/migrate"
+
+	"github.com/appleboy/com/convert"
 )
 
 func main() {
@@ -21,9 +23,19 @@ func main() {
 	gtSkipVerify := flag.Bool("gt-skip-verify", false, "Skip TLS verification for Gitea")
 	gtSourceID := flag.Int64("gt-source-id", 0, "Gitea Source ID")
 	apiTimeout := flag.String("timeout", "1m", "Timeout for requests")
+	sourceOrg := flag.String("source-org", "", "Source organization name")
+	targetOrg := flag.String("target-org", "", "Target organization name")
 	flag.Parse()
 
 	logger := slog.New(slog.NewTextHandler(log.Writer(), nil))
+
+	sourceOrgName := convert.FromPtr(sourceOrg)
+	targetOrgName := convert.FromPtr(targetOrg)
+
+	if sourceOrgName == "" || targetOrgName == "" {
+		logger.Error("source or target org is empty")
+		return
+	}
 
 	// check timeout format
 	timeout, err := time.ParseDuration(convert.FromPtr(apiTimeout))
@@ -46,7 +58,7 @@ func main() {
 		return
 	}
 
-	gtClient, err := gitea.NewGitea(ctx, &gitea.Config{
+	gtClient, err := gt.New(ctx, &gt.Config{
 		Server:     convert.FromPtr(gtServer),
 		Token:      convert.FromPtr(gtToken),
 		SkipVerify: convert.FromPtr(gtSkipVerify),
@@ -76,7 +88,46 @@ func main() {
 		return
 	}
 	logger.Info("gitea user", "login", gtUser.UserName)
-	logger.Info("gitea user", "id", gtUser.ID)
 	logger.Info("gitea user", "name", gtUser.FullName)
 	logger.Info("gitea user", "email", gtUser.Email)
+
+	// get github organization
+	ghOrg, err := ghClient.GetOrg(ctx, sourceOrgName)
+	if err != nil {
+		logger.Error("failed to get github org", "error", err)
+		return
+	}
+
+	m := migrate.New(
+		ghClient,
+		gtClient,
+		logger,
+	)
+
+	// create new gitea organization
+	_, err = m.CreateNewOrg(ctx, migrate.CreateNewOrgOption{
+		Name:        targetOrgName,
+		Description: convert.FromPtr(ghOrg.Description),
+		Public:      false,
+		SoucreID:    convert.FromPtr(gtSourceID),
+	})
+	if err != nil {
+		logger.Error("failed to create gitea org", "error", err)
+		return
+	}
+
+	// get github repo list from organization
+	ghRepos, err := ghClient.ListOrgRepos(ctx, sourceOrgName)
+	if err != nil {
+		logger.Error("failed to get github org repos", "error", err)
+		return
+	}
+
+	for _, repo := range ghRepos {
+		logger.Info("github repo", "name", convert.FromPtr(repo.Name))
+		logger.Info("github repo", "id", convert.FromPtr(repo.ID))
+		logger.Info("github repo", "owner", convert.FromPtr(repo.Owner.Login))
+		logger.Info("github repo", "owner_id", convert.FromPtr(repo.Owner.ID))
+		logger.Info("github repo", "owner_name", convert.FromPtr(repo.Owner.Name))
+	}
 }

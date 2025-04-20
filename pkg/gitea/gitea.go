@@ -214,44 +214,34 @@ func (g *Client) AddCollaborator(org, repo, user, permission string) (*gsdk.Resp
 	})
 }
 
+type CreateTeamOption struct {
+	Name        string
+	Description string
+	Permission  string
+}
+
 // CreateOrGetTeam create team
-func (g *Client) CreateOrGetTeam(org, permission string) (*gsdk.Team, error) {
+func (g *Client) CreateOrGetTeam(org string, opts CreateTeamOption) (*gsdk.Team, error) {
 	var opt gsdk.CreateTeamOption
-	switch permission {
-	case core.GiteaProjectAdmin:
-		opt = gsdk.CreateTeamOption{
-			Name:                    "OrgAdmin",
-			Description:             "OrgAdmin",
-			Permission:              gsdk.AccessModeAdmin,
-			IncludesAllRepositories: true,
-			CanCreateOrgRepo:        true,
-			Units:                   core.DefaultUnits,
-		}
-	case core.GiteaProjectWrite:
-		opt = gsdk.CreateTeamOption{
-			Name:                    "OrgWriter",
-			Description:             "OrgWriter",
-			Permission:              gsdk.AccessModeWrite,
-			IncludesAllRepositories: true,
-			Units:                   core.DefaultUnits,
-		}
-	case core.GiteaProjectRead:
-		opt = gsdk.CreateTeamOption{
-			Name:                    "OrgReader",
-			Description:             "OrgReader",
-			Permission:              gsdk.AccessModeRead,
-			IncludesAllRepositories: true,
-			Units:                   core.DefaultUnits,
-		}
-	case core.GiteaRepoCreate:
-		opt = gsdk.CreateTeamOption{
-			Name:                    "RepoCreator",
-			Description:             "RepoCreator",
-			Permission:              gsdk.AccessModeRead,
-			IncludesAllRepositories: false,
-			CanCreateOrgRepo:        true,
-			Units:                   core.DefaultUnits,
-		}
+
+	opt = gsdk.CreateTeamOption{
+		Name:        opts.Name,
+		Description: opts.Description,
+		Permission:  gsdk.AccessMode(opts.Permission),
+		Units:       core.DefaultUnits,
+	}
+
+	switch opts.Permission {
+	case core.GitHubTeamAdmin:
+		opt.Permission = gsdk.AccessModeAdmin
+		opt.CanCreateOrgRepo = true
+	case core.GitHubTeamPush:
+		opt.Permission = gsdk.AccessModeWrite
+	case core.GitHubTeamPull:
+		opt.Permission = gsdk.AccessModeRead
+	case core.GitHubTeamMaintain:
+		opt.Permission = gsdk.AccessModeWrite
+	case core.GitHubTeamTriager: // not supported
 	default:
 		return nil, errors.New("permission mode invalid")
 	}

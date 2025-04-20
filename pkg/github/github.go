@@ -56,6 +56,15 @@ func NewClient(cfg *Config) (*Client, error) {
 	}, nil
 }
 
+// GetUser gets a user's information by username
+func (c *Client) GetUser(ctx context.Context, username string) (*github.User, error) {
+	user, _, err := c.gh.Users.Get(ctx, username)
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
 // GetCurrentUser gets the current authenticated user's information
 func (c *Client) GetCurrentUser(ctx context.Context) (*github.User, error) {
 	user, _, err := c.gh.Users.Get(ctx, "")
@@ -105,6 +114,7 @@ func (c *Client) ListRepoUsers(ctx context.Context, owner, repo string) ([]*gith
 }
 
 // ListOrgTeams lists all teams in an organization
+// permission can be one of: "pull", "triage", "push", "maintain", "admin"
 func (c *Client) ListOrgTeams(ctx context.Context, org string) ([]*github.Team, error) {
 	opts := &github.ListOptions{PerPage: 100}
 	var allTeams []*github.Team
