@@ -47,7 +47,7 @@ type Config struct {
 // New creates a new Gitea client with the provided configuration and context.
 // Returns a pointer to the Client and an error if initialization fails.
 func New(ctx context.Context, cfg *Config) (*Client, error) {
-	if cfg.Server == "" || !(strings.HasPrefix(cfg.Server, "http://") || strings.HasPrefix(cfg.Server, "https://")) {
+	if cfg.Server == "" || (!strings.HasPrefix(cfg.Server, "http://") && !strings.HasPrefix(cfg.Server, "https://")) {
 		return nil, errors.New("invalid gitea server: must start with http:// or https://")
 	}
 
@@ -138,22 +138,31 @@ type CreateOrgOption struct {
 func (g *Client) CreateAndGetOrg(opts CreateOrgOption) (*gsdk.Organization, error) {
 	newOrg, response, err := g.client.GetOrg(opts.Name)
 	if err != nil {
-		// Handle 404 case by creating the organization
-		if response != nil && response.StatusCode == http.StatusNotFound {
+		switch {
+		case response != nil && response.StatusCode == http.StatusNotFound:
+			// Handle 404 case by creating the organization
 			visible := opts.Visibility
-			newOrg, _, err = g.client.CreateOrg(gsdk.CreateOrgOption{
+			var createErr error
+			newOrg, _, createErr = g.client.CreateOrg(gsdk.CreateOrgOption{
 				Name:        opts.Name,
 				Description: opts.Description,
 				Visibility:  visible,
 			})
-			if err != nil {
-				return nil, &GiteaError{Operation: "create_org", Code: response.StatusCode, Message: err.Error()}
+			if createErr != nil {
+				// Use the original 404 status code as per the original logic
+				return nil, &GiteaError{Operation: "create_org", Code: response.StatusCode, Message: createErr.Error()}
 			}
-		} else if response != nil {
+			// If creation succeeded, reset err so we return the new org below
+			err = nil
+		case response != nil:
+			// Handle other errors from GetOrg that have a response
 			return nil, &GiteaError{Operation: "get_org", Code: response.StatusCode, Message: err.Error()}
-		} else {
+		default: // response == nil
+			// Handle errors from GetOrg without a response
 			return nil, err
 		}
+		// If err was non-nil initially but creation succeeded, err is now nil.
+		// If any return occurred within the switch, we won't reach here.
 	}
 
 	return newOrg, nil
