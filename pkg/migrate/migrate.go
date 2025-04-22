@@ -32,17 +32,14 @@ type CreateNewOrgOption struct {
 	Description string
 	Public      bool
 	Permission  map[string][]string
-	SoucreID    int64
+	SourceID    int64
 }
 
 // CreateNewOrg create new organization
 func (m *migrate) CreateNewOrg(ctx context.Context, opts CreateNewOrgOption) (*gsdk.Organization, error) {
 	visibility := gsdk.VisibleTypePrivate
-	switch opts.Public {
-	case true:
+	if opts.Public {
 		visibility = gsdk.VisibleTypePublic
-	case false:
-		visibility = gsdk.VisibleTypePrivate
 	}
 
 	m.logger.Info("start create organization", "name", opts.Name)
@@ -79,7 +76,7 @@ func (m *migrate) CreateNewOrg(ctx context.Context, opts CreateNewOrgOption) (*g
 			Username:  convert.FromPtr(ghUser.Login),
 			FullName:  convert.FromPtr(ghUser.Name),
 			Email:     convert.FromPtr(ghUser.Email),
-			SourceID:  opts.SoucreID,
+			SourceID:  opts.SourceID,
 		})
 		if err != nil {
 			m.logger.Error(

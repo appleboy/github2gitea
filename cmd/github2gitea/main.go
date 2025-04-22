@@ -115,7 +115,7 @@ func main() {
 		Name:        targetOrgName,
 		Description: convert.FromPtr(ghOrg.Description),
 		Public:      false,
-		SoucreID:    convert.FromPtr(gtSourceID),
+		SourceID:    convert.FromPtr(gtSourceID),
 	})
 	if err != nil {
 		logger.Error("failed to create gitea org", "error", err)
