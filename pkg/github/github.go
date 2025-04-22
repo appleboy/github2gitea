@@ -3,6 +3,7 @@ package github
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"log/slog"
 	"net/http"
 	"time"
@@ -25,6 +26,12 @@ type Client struct {
 
 // NewClient creates a new GitHub Client
 func NewClient(cfg *Config) (*Client, error) {
+	if cfg == nil {
+		return nil, errors.New("github config is required")
+	}
+	if cfg.Token == "" {
+		return nil, errors.New("github token is required")
+	}
 	var err error
 	httpClient := &http.Client{
 		Timeout: 10 * time.Second,
@@ -92,126 +99,105 @@ func (c *Client) GetUserPermissionFromOrg(ctx context.Context, org, username str
 	return membership.GetRole(), nil
 }
 
-// ListRepoUsers lists all users with access to a repository
+/*
+ListRepoUsers lists all users with access to a repository.
+This is now implemented using paginatedFetch.
+*/
 func (c *Client) ListRepoUsers(ctx context.Context, owner, repo string) ([]*github.User, error) {
-	opts := &github.ListCollaboratorsOptions{
-		ListOptions: github.ListOptions{PerPage: 100},
-	}
-
-	var allUsers []*github.User
-	for {
-		users, resp, err := c.gh.Repositories.ListCollaborators(ctx, owner, repo, opts)
-		if err != nil {
-			return nil, err
-		}
-		allUsers = append(allUsers, users...)
-		if resp.NextPage == 0 {
-			break
-		}
-		opts.Page = resp.NextPage
-	}
-	return allUsers, nil
+	return paginatedFetch(ctx, func(page int) ([]*github.User, *github.Response, error) {
+		return c.gh.Repositories.ListCollaborators(ctx, owner, repo, &github.ListCollaboratorsOptions{
+			ListOptions: github.ListOptions{
+				Page:    page,
+				PerPage: 100,
+			},
+		})
+	})
 }
 
-// ListRepoCollaborators lists all collaborators in a repository
+/*
+ListRepoCollaborators lists all collaborators in a repository.
+This is now implemented using paginatedFetch.
+*/
 func (c *Client) ListRepoCollaborators(ctx context.Context, owner, repo string) ([]*github.User, error) {
-	opts := &github.ListCollaboratorsOptions{
-		ListOptions: github.ListOptions{PerPage: 100},
-	}
-	var allUsers []*github.User
+	return paginatedFetch(ctx, func(page int) ([]*github.User, *github.Response, error) {
+		return c.gh.Repositories.ListCollaborators(ctx, owner, repo, &github.ListCollaboratorsOptions{
+			ListOptions: github.ListOptions{
+				Page:    page,
+				PerPage: 100,
+			},
+		})
+	})
+}
+
+/*
+paginatedFetch is a generic helper for paginated GitHub API calls.
+fetch: a function that takes a page number and returns items, response, error.
+*/
+func paginatedFetch[T any](
+	_ context.Context,
+	fetch func(page int) ([]*T, *github.Response, error),
+) ([]*T, error) {
+	var allItems []*T
+	page := 1
 	for {
-		users, resp, err := c.gh.Repositories.ListCollaborators(ctx, owner, repo, opts)
+		items, resp, err := fetch(page)
 		if err != nil {
 			return nil, err
 		}
-		allUsers = append(allUsers, users...)
-		if resp.NextPage == 0 {
+		allItems = append(allItems, items...)
+		if resp == nil || resp.NextPage == 0 {
 			break
 		}
-		opts.Page = resp.NextPage
+		page = resp.NextPage
 	}
-	return allUsers, nil
+	return allItems, nil
 }
 
 // ListOrgTeams lists all teams in an organization
 // permission can be one of: "pull", "triage", "push", "maintain", "admin"
 func (c *Client) ListOrgTeams(ctx context.Context, org string) ([]*github.Team, error) {
-	opts := &github.ListOptions{PerPage: 100}
-	var allTeams []*github.Team
-	for {
-		teams, resp, err := c.gh.Teams.ListTeams(ctx, org, opts)
-		if err != nil {
-			return nil, err
-		}
-		allTeams = append(allTeams, teams...)
-		if resp.NextPage == 0 {
-			break
-		}
-		opts.Page = resp.NextPage
-	}
-	return allTeams, nil
+	return paginatedFetch(ctx, func(page int) ([]*github.Team, *github.Response, error) {
+		return c.gh.Teams.ListTeams(ctx, org, &github.ListOptions{
+			Page:    page,
+			PerPage: 100,
+		})
+	})
 }
 
-// ListOrgTeamsMembers lists all members in a team
+// ListOrgTeamsMembers lists all members in a team using paginatedFetch
 func (c *Client) ListOrgTeamsMembers(ctx context.Context, org string, slug string) ([]*github.User, error) {
-	opts := &github.TeamListTeamMembersOptions{
-		ListOptions: github.ListOptions{PerPage: 100},
-	}
-	var allMembers []*github.User
-	for {
-		members, resp, err := c.gh.Teams.ListTeamMembersBySlug(ctx, org, slug, opts)
-		if err != nil {
-			return nil, err
-		}
-		allMembers = append(allMembers, members...)
-		if resp.NextPage == 0 {
-			break
-		}
-		opts.Page = resp.NextPage
-	}
-	return allMembers, nil
+	return paginatedFetch(ctx, func(page int) ([]*github.User, *github.Response, error) {
+		return c.gh.Teams.ListTeamMembersBySlug(ctx, org, slug, &github.TeamListTeamMembersOptions{
+			ListOptions: github.ListOptions{
+				Page:    page,
+				PerPage: 100,
+			},
+		})
+	})
 }
 
-// ListOrgUsers lists all members in an organization
+// ListOrgUsers lists all members in an organization using paginatedFetch
 func (c *Client) ListOrgUsers(ctx context.Context, org string) ([]*github.User, error) {
-	opts := &github.ListMembersOptions{
-		ListOptions: github.ListOptions{PerPage: 100},
-	}
-
-	var allUsers []*github.User
-	for {
-		users, resp, err := c.gh.Organizations.ListMembers(ctx, org, opts)
-		if err != nil {
-			return nil, err
-		}
-		allUsers = append(allUsers, users...)
-		if resp.NextPage == 0 {
-			break
-		}
-		opts.Page = resp.NextPage
-	}
-	return allUsers, nil
+	return paginatedFetch(ctx, func(page int) ([]*github.User, *github.Response, error) {
+		return c.gh.Organizations.ListMembers(ctx, org, &github.ListMembersOptions{
+			ListOptions: github.ListOptions{
+				Page:    page,
+				PerPage: 100,
+			},
+		})
+	})
 }
 
-// ListOrgRepos lists all repositories in an organization
+// ListOrgRepos lists all repositories in an organization using paginatedFetch
 func (c *Client) ListOrgRepos(ctx context.Context, org string) ([]*github.Repository, error) {
-	opts := &github.RepositoryListByOrgOptions{
-		ListOptions: github.ListOptions{PerPage: 100},
-	}
-
-	var allRepos []*github.Repository
-	for {
-		repos, resp, err := c.gh.Repositories.ListByOrg(ctx, org, opts)
-		if err != nil {
-			return nil, err
-		}
-		allRepos = append(allRepos, repos...)
-		if resp.NextPage == 0 {
-			break
-		}
-		opts.Page = resp.NextPage
-	}
-	return allRepos, nil
+	return paginatedFetch(ctx, func(page int) ([]*github.Repository, *github.Response, error) {
+		return c.gh.Repositories.ListByOrg(ctx, org, &github.RepositoryListByOrgOptions{
+			ListOptions: github.ListOptions{
+				Page:    page,
+				PerPage: 100,
+			},
+		})
+	})
 }
 
 // GetRepo gets a single repository's information
