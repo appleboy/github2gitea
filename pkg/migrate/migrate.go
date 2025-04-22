@@ -36,6 +36,8 @@ type CreateNewOrgOption struct {
 }
 
 // CreateNewOrg create new organization
+var invalidCharsRegex = regexp.MustCompile(`[^a-zA-Z0-9\-_\.]`)
+
 func (m *migrate) CreateNewOrg(ctx context.Context, opts CreateNewOrgOption) (*gsdk.Organization, error) {
 	visibility := gsdk.VisibleTypePrivate
 	if opts.Public {
@@ -86,7 +88,7 @@ func (m *migrate) CreateNewOrg(ctx context.Context, opts CreateNewOrgOption) (*g
 			)
 			continue
 		}
-		m.logger.Debug(
+		m.logger.Info(
 			"create gitea user",
 			"name", convert.FromPtr(ghUser.Login),
 			"email", convert.FromPtr(ghUser.Email),
@@ -103,7 +105,7 @@ func (m *migrate) CreateNewOrg(ctx context.Context, opts CreateNewOrgOption) (*g
 			)
 			continue
 		}
-		m.logger.Debug(
+		m.logger.Info(
 			"get github user permission",
 			"name", convert.FromPtr(ghUser.Login),
 			"permission", permission,
@@ -116,8 +118,6 @@ func (m *migrate) CreateNewOrg(ctx context.Context, opts CreateNewOrgOption) (*g
 		return nil, err
 	}
 	// create gitea organization teams
-	// Define a regular expression to match characters not allowed in AlphaDashDot
-	invalidCharsRegex := regexp.MustCompile(`[^a-zA-Z0-9\-_\.]`)
 	for _, ghTeam := range ghTeams {
 		// Sanitize the team name
 		sanitizedTeamName := invalidCharsRegex.ReplaceAllString(convert.FromPtr(ghTeam.Name), "_")
@@ -134,7 +134,7 @@ func (m *migrate) CreateNewOrg(ctx context.Context, opts CreateNewOrgOption) (*g
 			)
 			continue
 		}
-		m.logger.Debug(
+		m.logger.Info(
 			"create gitea team",
 			"name", convert.FromPtr(ghTeam.Name),
 			"permission", convert.FromPtr(ghTeam.Permission),
@@ -162,7 +162,7 @@ func (m *migrate) CreateNewOrg(ctx context.Context, opts CreateNewOrgOption) (*g
 				)
 				continue
 			}
-			m.logger.Debug(
+			m.logger.Info(
 				"add gitea team member",
 				"name", convert.FromPtr(ghTeam.Name),
 				"user", convert.FromPtr(ghUser.Login),
@@ -211,7 +211,7 @@ func (m *migrate) MigrateNewRepo(ctx context.Context, opts MigrateNewRepoOption)
 
 	for _, ghUser := range ghUsers {
 		if *ghUser.Type != "User" {
-			m.logger.Debug(
+			m.logger.Info(
 				"skip github user type",
 				"name", convert.FromPtr(ghUser.Login),
 				"type", convert.FromPtr(ghUser.Type),
