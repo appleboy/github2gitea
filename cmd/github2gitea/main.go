@@ -11,10 +11,27 @@ import (
 	gh "github.com/appleboy/github2gitea/pkg/github"
 	"github.com/appleboy/github2gitea/pkg/migrate"
 
+	gsdk "code.gitea.io/sdk/gitea"
 	"github.com/appleboy/com/convert"
+	"github.com/google/go-github/v71/github"
 )
 
-func main() {
+// Config holds all configuration options
+type Config struct {
+	GHToken      string
+	GHSkipVerify bool
+	GHServer     string
+	GTServer     string
+	GTToken      string
+	GTSkipVerify bool
+	GTSourceID   int64
+	APITimeout   string
+	SourceOrg    string
+	TargetOrg    string
+	Debug        bool
+}
+
+func loadConfig() *Config {
 	ghToken := flag.String("gh-token", "", "GitHub Personal Access Token")
 	ghSkipVerify := flag.Bool("gh-skip-verify", false, "Skip TLS verification for GitHub")
 	ghServer := flag.String("gh-server", "", "GitHub Enterprise Server URL")
@@ -28,80 +45,90 @@ func main() {
 	debug := flag.Bool("debug", false, "Enable debug logging")
 	flag.Parse()
 
+	return &Config{
+		GHToken:      convert.FromPtr(ghToken),
+		GHSkipVerify: convert.FromPtr(ghSkipVerify),
+		GHServer:     convert.FromPtr(ghServer),
+		GTServer:     convert.FromPtr(gtServer),
+		GTToken:      convert.FromPtr(gtToken),
+		GTSkipVerify: convert.FromPtr(gtSkipVerify),
+		GTSourceID:   convert.FromPtr(gtSourceID),
+		APITimeout:   convert.FromPtr(apiTimeout),
+		SourceOrg:    convert.FromPtr(sourceOrg),
+		TargetOrg:    convert.FromPtr(targetOrg),
+		Debug:        convert.FromPtr(debug),
+	}
+}
+
+func setupLogger(debug bool) *slog.Logger {
 	logLevel := slog.LevelInfo
-	if convert.FromPtr(debug) {
+	if debug {
 		logLevel = slog.LevelDebug
 	}
-	logger := slog.New(slog.NewTextHandler(log.Writer(), &slog.HandlerOptions{
+	return slog.New(slog.NewTextHandler(log.Writer(), &slog.HandlerOptions{
 		Level: logLevel,
 	}))
+}
 
-	sourceOrgName := convert.FromPtr(sourceOrg)
-	targetOrgName := convert.FromPtr(targetOrg)
-
-	if sourceOrgName == "" || targetOrgName == "" {
-		logger.Error("source or target org is empty")
-		return
-	}
-
-	// check timeout format
-	timeout, err := time.ParseDuration(convert.FromPtr(apiTimeout))
-	if err != nil {
-		logger.Error("failed to parse timeout", "error", err)
-		return
-	}
-	// command timeout
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
-	ghClient, err := gh.NewClient(&gh.Config{
-		Token:      convert.FromPtr(ghToken),
-		Server:     convert.FromPtr(ghServer),
-		SkipVerify: convert.FromPtr(ghSkipVerify),
+func createClients(ctx context.Context, cfg *Config, logger *slog.Logger) (ghClient *gh.Client, gtClient *gt.Client, err error) {
+	ghClient, err = gh.NewClient(&gh.Config{
+		Token:      cfg.GHToken,
+		Server:     cfg.GHServer,
+		SkipVerify: cfg.GHSkipVerify,
 		Logger:     logger,
 	})
 	if err != nil {
-		logger.Error("failed to create GitHub client", "error", err)
-		return
+		return nil, nil, err
 	}
 
-	gtClient, err := gt.New(ctx, &gt.Config{
-		Server:     convert.FromPtr(gtServer),
-		Token:      convert.FromPtr(gtToken),
-		SkipVerify: convert.FromPtr(gtSkipVerify),
+	gtClient, err = gt.New(ctx, &gt.Config{
+		Server:     cfg.GTServer,
+		Token:      cfg.GTToken,
+		SkipVerify: cfg.GTSkipVerify,
 		Logger:     logger,
-		SourceID:   convert.FromPtr(gtSourceID),
+		SourceID:   cfg.GTSourceID,
 	})
 	if err != nil {
-		logger.Error("failed to create gitea client", "error", err)
-		return
+		return nil, nil, err
 	}
+	return ghClient, gtClient, nil
+}
 
+func printUserInfo(logger *slog.Logger, ghUser *github.User, gtUser *gsdk.User) {
+	logger.Info("github user",
+		"login", convert.FromPtr(ghUser.Login),
+		"name", convert.FromPtr(ghUser.Name),
+		"email", convert.FromPtr(ghUser.Email),
+	)
+	logger.Info("gitea user",
+		"login", gtUser.UserName,
+		"name", gtUser.FullName,
+		"email", gtUser.Email,
+	)
+}
+
+func migrateOrgAndRepos(ctx context.Context, cfg *Config, logger *slog.Logger, ghClient *gh.Client, gtClient *gt.Client) error {
 	// get github current user
 	ghUser, err := ghClient.GetCurrentUser(ctx)
 	if err != nil {
 		logger.Error("failed to get current github user", "error", err)
-		return
+		return err
 	}
-	logger.Info("github user", "login", convert.FromPtr(ghUser.Login))
-	logger.Info("github user", "name", convert.FromPtr(ghUser.Name))
-	logger.Info("github user", "email", convert.FromPtr(ghUser.Email))
 
 	// get gitea current user
 	gtUser, err := gtClient.GetCurrentUser()
 	if err != nil {
 		logger.Error("failed to get current gitea user", "error", err)
-		return
+		return err
 	}
-	logger.Info("gitea user", "login", gtUser.UserName)
-	logger.Info("gitea user", "name", gtUser.FullName)
-	logger.Info("gitea user", "email", gtUser.Email)
+
+	printUserInfo(logger, ghUser, gtUser)
 
 	// get github organization
-	ghOrg, err := ghClient.GetOrg(ctx, sourceOrgName)
+	ghOrg, err := ghClient.GetOrg(ctx, cfg.SourceOrg)
 	if err != nil {
 		logger.Error("failed to get github org", "error", err)
-		return
+		return err
 	}
 
 	m := migrate.New(
@@ -112,21 +139,21 @@ func main() {
 
 	// create new gitea organization
 	_, err = m.CreateNewOrg(ctx, migrate.CreateNewOrgOption{
-		Name:        targetOrgName,
+		Name:        cfg.TargetOrg,
 		Description: convert.FromPtr(ghOrg.Description),
 		Public:      false,
-		SourceID:    convert.FromPtr(gtSourceID),
+		SourceID:    cfg.GTSourceID,
 	})
 	if err != nil {
 		logger.Error("failed to create gitea org", "error", err)
-		return
+		return err
 	}
 
 	// get github repo list from organization
-	ghRepos, err := ghClient.ListOrgRepos(ctx, sourceOrgName)
+	ghRepos, err := ghClient.ListOrgRepos(ctx, cfg.SourceOrg)
 	if err != nil {
 		logger.Error("failed to get github org repos", "error", err)
-		return
+		return err
 	}
 
 	for _, repo := range ghRepos {
@@ -138,10 +165,41 @@ func main() {
 			Description:  convert.FromPtr(repo.Description),
 			Private:      convert.FromPtr(repo.Private),
 			AuthUsername: convert.FromPtr(ghUser.Login),
-			AuthToken:    convert.FromPtr(ghToken),
+			AuthToken:    cfg.GHToken,
 		})
 		if err != nil {
 			logger.Error("migration repository error", "error", err)
 		}
+	}
+	return nil
+}
+
+func main() {
+	cfg := loadConfig()
+	logger := setupLogger(cfg.Debug)
+
+	if cfg.SourceOrg == "" || cfg.TargetOrg == "" {
+		logger.Error("source or target org is empty")
+		return
+	}
+
+	// check timeout format
+	timeout, err := time.ParseDuration(cfg.APITimeout)
+	if err != nil {
+		logger.Error("failed to parse timeout", "error", err)
+		return
+	}
+	// command timeout
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	ghClient, gtClient, err := createClients(ctx, cfg, logger)
+	if err != nil {
+		logger.Error("failed to create clients", "error", err)
+		return
+	}
+
+	if err := migrateOrgAndRepos(ctx, cfg, logger, ghClient, gtClient); err != nil {
+		logger.Error("migration failed", "error", err)
 	}
 }
