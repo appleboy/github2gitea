@@ -134,8 +134,8 @@ func main() {
 	cfg := config.LoadConfig()
 	logger := setupLogger(cfg.Debug)
 
-	if cfg.SourceOrg == "" || cfg.TargetOrg == "" {
-		logger.Error("source or target org is empty")
+	if err := cfg.IsVaild(); err != nil {
+		logger.Error("invalid config", "error", err)
 		return
 	}
 

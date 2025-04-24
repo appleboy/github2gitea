@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"flag"
 
 	"github.com/appleboy/com/convert"
@@ -19,6 +20,22 @@ type Config struct {
 	SourceOrg    string
 	TargetOrg    string
 	Debug        bool
+}
+
+func (cfg *Config) IsVaild() error {
+	if cfg.GHToken == "" {
+		return errors.New("GHToken is required")
+	}
+	if cfg.GTToken == "" {
+		return errors.New("GTToken is required")
+	}
+	if cfg.SourceOrg == "" {
+		return errors.New("SourceOrg is required")
+	}
+	if cfg.TargetOrg == "" {
+		return errors.New("TargetOrg is required")
+	}
+	return nil
 }
 
 // LoadConfig parses command-line flags and returns a Config struct
