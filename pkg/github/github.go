@@ -194,7 +194,7 @@ func (c *Client) ListOrgRepos(ctx context.Context, org string) ([]*github.Reposi
 		return c.gh.Repositories.ListByOrg(ctx, org, &github.RepositoryListByOrgOptions{
 			ListOptions: github.ListOptions{
 				Page:    page,
-				PerPage: 100,
+				PerPage: 10,
 			},
 		})
 	})

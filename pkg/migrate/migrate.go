@@ -88,15 +88,9 @@ func (m *migrate) CreateNewOrg(ctx context.Context, opts CreateNewOrgOption) (*g
 			)
 			continue
 		}
-		m.logger.Info(
-			"create gitea user",
-			"name", convert.FromPtr(ghUser.Login),
-			"email", convert.FromPtr(ghUser.Email),
-			"full_name", convert.FromPtr(ghUser.Name),
-		)
 
 		// get github user permission from org
-		permission, err := m.ghClient.GetUserPermissionFromOrg(ctx, opts.Name, gtUser.LoginName)
+		_, err = m.ghClient.GetUserPermissionFromOrg(ctx, opts.Name, gtUser.LoginName)
 		if err != nil {
 			m.logger.Error(
 				"failed to get github user permission",
@@ -105,11 +99,6 @@ func (m *migrate) CreateNewOrg(ctx context.Context, opts CreateNewOrgOption) (*g
 			)
 			continue
 		}
-		m.logger.Info(
-			"get github user permission",
-			"name", convert.FromPtr(ghUser.Login),
-			"permission", permission,
-		)
 	}
 
 	// get github organization teams
@@ -134,11 +123,6 @@ func (m *migrate) CreateNewOrg(ctx context.Context, opts CreateNewOrgOption) (*g
 			)
 			continue
 		}
-		m.logger.Info(
-			"create gitea team",
-			"name", convert.FromPtr(ghTeam.Name),
-			"permission", convert.FromPtr(ghTeam.Permission),
-		)
 
 		// get github team members
 		ghUsers, err := m.ghClient.ListOrgTeamsMembers(ctx, opts.Name, *ghTeam.Slug)
@@ -150,6 +134,7 @@ func (m *migrate) CreateNewOrg(ctx context.Context, opts CreateNewOrgOption) (*g
 			)
 			continue
 		}
+
 		// add gitea team members
 		for _, ghUser := range ghUsers {
 			err := m.gtClient.AddTeamMember(team.ID, convert.FromPtr(ghUser.Login))
@@ -162,11 +147,6 @@ func (m *migrate) CreateNewOrg(ctx context.Context, opts CreateNewOrgOption) (*g
 				)
 				continue
 			}
-			m.logger.Info(
-				"add gitea team member",
-				"name", convert.FromPtr(ghTeam.Name),
-				"user", convert.FromPtr(ghUser.Login),
-			)
 		}
 	}
 	return org, nil

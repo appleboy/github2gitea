@@ -120,7 +120,7 @@ func migrateOrgAndRepos(ctx context.Context, cfg *config.Config, logger *slog.Lo
 	}
 
 	// get github repo list from organization
-	ghRepos, err := ghClient.ListOrgRepos(ctx, cfg.SourceOrg)
+	ghRepos, err := ghClient.ListOrgRepos(ctx, *ghOrg.Login)
 	if err != nil {
 		logger.Error("failed to get github org repos", "error", err)
 		return err
@@ -141,6 +141,7 @@ func migrateOrgAndRepos(ctx context.Context, cfg *config.Config, logger *slog.Lo
 			logger.Error("migration repository error", "error", err)
 		}
 	}
+
 	return nil
 }
 
