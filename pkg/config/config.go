@@ -20,6 +20,7 @@ type Config struct {
 	SourceOrg    string
 	TargetOrg    string
 	Debug        bool
+	Version      bool
 }
 
 func (cfg *Config) IsVaild() error {
@@ -51,6 +52,7 @@ func LoadConfig() *Config {
 	sourceOrg := flag.String("source-org", "", "Source organization name")
 	targetOrg := flag.String("target-org", "", "Target organization name")
 	debug := flag.Bool("debug", false, "Enable debug logging")
+	version := flag.Bool("version", false, "Show version information")
 	flag.Parse()
 
 	return &Config{
@@ -65,5 +67,6 @@ func LoadConfig() *Config {
 		SourceOrg:    convert.FromPtr(sourceOrg),
 		TargetOrg:    convert.FromPtr(targetOrg),
 		Debug:        convert.FromPtr(debug),
+		Version:      convert.FromPtr(version),
 	}
 }

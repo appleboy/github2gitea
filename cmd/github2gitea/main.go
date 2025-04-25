@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"log/slog"
 	"time"
@@ -14,6 +15,19 @@ import (
 	gsdk "code.gitea.io/sdk/gitea"
 	"github.com/appleboy/com/convert"
 	"github.com/google/go-github/v71/github"
+)
+
+var (
+	// Version is the version of the application.
+	Version = "0.0.1"
+	// BuildTime is the build time of the application.
+	BuildTime = "unknown"
+	// Commit is the commit hash of the application.
+	Commit = "unknown"
+	// Name is the name of the application.
+	Name = "github2gitea"
+	// Description is the description of the application.
+	Description = "Migrate GitHub repositories to Gitea"
 )
 
 func setupLogger(debug bool) *slog.Logger {
@@ -133,6 +147,11 @@ func migrateOrgAndRepos(ctx context.Context, cfg *config.Config, logger *slog.Lo
 func main() {
 	cfg := config.LoadConfig()
 	logger := setupLogger(cfg.Debug)
+
+	if cfg.Version {
+		fmt.Printf("%s version %s: %s (%s %s)", Name, Version, Description, Commit, BuildTime)
+		return
+	}
 
 	if err := cfg.IsVaild(); err != nil {
 		logger.Error("invalid config", "error", err)
