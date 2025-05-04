@@ -1,3 +1,4 @@
+version: 2
 before:
   hooks:
     - go mod tidy
@@ -9,8 +10,10 @@ builds:
       - darwin
       - linux
       - windows
+      - freebsd
     goarch:
       - amd64
+      - arm
       - arm64
     goarm:
       - "5"
@@ -57,8 +60,12 @@ builds:
       - -trimpath
     ldflags:
       - -s -w
-      - -X github.com/appleboy/BitbucketServer2Gitea/cmd.Version={{.Version}}
-      - -X github.com/appleboy/BitbucketServer2Gitea/cmd.Commit={{.ShortCommit}}
+      - -X 'github.com/appleboy/github2gitea/version.Version={{.Version}}'
+      - -X 'github.com/appleboy/github2gitea/version.BuildTime={{.Date}}'
+      - -X 'github.com/appleboy/github2gitea/version.GitCommit={{.FullCommit}}'
+      - -X 'github.com/appleboy/github2gitea/version.GoVersion={{.Env.GO_VERSION}}'
+      - -X 'github.com/appleboy/github2gitea/version.BuildOS={{.Os}}'
+      - -X 'github.com/appleboy/github2gitea/version.BuildArch={{.Arch}}'
     binary: >-
       {{ .ProjectName }}-
       {{- if .IsSnapshot }}{{ .Branch }}-
@@ -77,7 +84,7 @@ builds:
     main: ./cmd/github2gitea
 
 archives:
-  - format: binary
+  - formats: ["binary"]
     name_template: "{{ .Binary }}"
     allow_different_binary_count: true
 
@@ -87,7 +94,7 @@ checksum:
     - glob: ./**.xz
 
 snapshot:
-  name_template: "{{ incpatch .Version }}"
+  version_template: "{{ incpatch .Version }}"
 
 release:
   # You can add extra pre-existing files to the release.
@@ -99,32 +106,7 @@ release:
     - glob: ./**.xz
 
 changelog:
-  # Set it to true if you wish to skip the changelog generation.
-  # This may result in an empty release notes on GitHub/GitLab/Gitea.
-  disable: false
-
-  # Changelog generation implementation to use.
-  #
-  # Valid options are:
-  # - `git`: uses `git log`;
-  # - `github`: uses the compare GitHub API, appending the author login to the changelog.
-  # - `gitlab`: uses the compare GitLab API, appending the author name and email to the changelog.
-  # - `github-native`: uses the GitHub release notes generation API, disables the groups feature.
-  #
-  # Defaults to `git`.
   use: github
-
-  # Sorts the changelog by the commit's messages.
-  # Could either be asc, desc or empty
-  # Default is empty
-  sort: asc
-
-  # Group commits messages by given regex and title.
-  # Order value defines the order of the groups.
-  # Proving no regex means all commits will be grouped under the default group.
-  # Groups are disabled when using github-native, as it already groups things by itself.
-  #
-  # Default is no groups.
   groups:
     - title: Features
       regexp: "^.*feat[(\\w)]*:+.*$"
