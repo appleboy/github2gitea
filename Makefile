@@ -7,11 +7,14 @@ TAGS ?=
 VERSION ?= $(if $(DRONE_TAG),$(DRONE_TAG),$(shell git describe --tags 2>/dev/null || echo "dev-$(shell git rev-parse --short HEAD)"))
 COMMIT ?= $(shell git rev-parse --short HEAD)
 
-# Unified ldflags handling
-LDFLAGS_BASE := -X 'main.Version=$(VERSION)' \
-	-X 'main.Commit=$(COMMIT)' \
-	-X 'main.BuildTime=$(shell date -u +%Y-%m-%dT%H:%M:%SZ)' \
+LDFLAGS_BASE ?= -X 'github.com/appleboy/$(EXECUTABLE)/pkg/version.Version=$(VERSION)' \
+	-X 'github.com/appleboy/$(EXECUTABLE)/pkg/version.BuildTime=$(shell date +%Y-%m-%dT%H:%M:%S)' \
+	-X 'github.com/appleboy/$(EXECUTABLE)/pkg/version.GitCommit=$(shell git rev-parse HEAD)' \
+	-X 'github.com/appleboy/$(EXECUTABLE)/pkg/version.GoVersion=$(shell $(GO) version | cut -d " " -f 3)' \
+	-X 'github.com/appleboy/$(EXECUTABLE)/pkg/version.BuildOS=$(shell $(GO) env GOOS)' \
+	-X 'github.com/appleboy/$(EXECUTABLE)/pkg/version.BuildArch=$(shell $(GO) env GOARCH)' \
 	-s -w
+
 ifeq ($(shell uname), Darwin)
 	EXTLDFLAGS :=
 else

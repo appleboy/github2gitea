@@ -60,12 +60,12 @@ builds:
       - -trimpath
     ldflags:
       - -s -w
-      - -X 'github.com/appleboy/github2gitea/version.Version={{.Version}}'
-      - -X 'github.com/appleboy/github2gitea/version.BuildTime={{.Date}}'
-      - -X 'github.com/appleboy/github2gitea/version.GitCommit={{.FullCommit}}'
-      - -X 'github.com/appleboy/github2gitea/version.GoVersion={{.Env.GO_VERSION}}'
-      - -X 'github.com/appleboy/github2gitea/version.BuildOS={{.Os}}'
-      - -X 'github.com/appleboy/github2gitea/version.BuildArch={{.Arch}}'
+      - -X 'github.com/appleboy/github2gitea/pkg/version.Version={{.Version}}'
+      - -X 'github.com/appleboy/github2gitea/pkg/version.BuildTime={{.Date}}'
+      - -X 'github.com/appleboy/github2gitea/pkg/version.GitCommit={{.FullCommit}}'
+      - -X 'github.com/appleboy/github2gitea/pkg/version.GoVersion={{.Env.GO_VERSION}}'
+      - -X 'github.com/appleboy/github2gitea/pkg/version.BuildOS={{.Os}}'
+      - -X 'github.com/appleboy/github2gitea/pkg/version.BuildArch={{.Arch}}'
     binary: >-
       {{ .ProjectName }}-
       {{- if .IsSnapshot }}{{ .Branch }}-
