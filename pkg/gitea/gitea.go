@@ -348,3 +348,30 @@ func (g *Client) AddTeamMember(id int64, user string) error {
 	_, err := g.client.AddTeamMember(id, user)
 	return err
 }
+
+// CreatePublicKeyOption contains options for creating a user's SSH key.
+type CreatePublicKeyOption struct {
+	Title string
+	Key   string
+}
+
+// CreateUserPublicKey creates an SSH public key for the specified user.
+func (g *Client) CreateUserPublicKey(username string, opts CreatePublicKeyOption) (*gsdk.PublicKey, error) {
+	key, resp, err := g.client.AdminCreateUserPublicKey(
+		username,
+		gsdk.CreateKeyOption{
+			Title: opts.Title,
+			Key:   opts.Key,
+		})
+	if err != nil {
+		if resp != nil {
+			return nil, &GiteaError{
+				Operation: "create_ssh_key",
+				Code:      resp.StatusCode,
+				Message:   err.Error(),
+			}
+		}
+		return nil, err
+	}
+	return key, nil
+}

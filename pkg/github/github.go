@@ -211,3 +211,13 @@ func (c *Client) GetOrg(ctx context.Context, org string) (*github.Organization, 
 	organization, _, err := c.gh.Organizations.Get(ctx, org)
 	return organization, err
 }
+
+// ListUserKeys lists all public keys for a user using paginatedFetch
+func (c *Client) ListUserKeys(ctx context.Context, username string) ([]*github.Key, error) {
+	return paginatedFetch(ctx, func(page int) ([]*github.Key, *github.Response, error) {
+		return c.gh.Users.ListKeys(ctx, username, &github.ListOptions{
+			Page:    page,
+			PerPage: 100,
+		})
+	})
+}

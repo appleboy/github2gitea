@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"log/slog"
+	"net/http"
 	"os"
 	"time"
 
@@ -157,7 +158,7 @@ func readUserList(path string) ([]UserCSV, error) {
 	}
 	var users []UserCSV
 	for index, rec := range records {
-		// Skip header and invalid lines
+		// Skip the header row and invalid lines
 		if index == 0 || len(rec) < 5 {
 			continue
 		}
@@ -170,14 +171,18 @@ func readUserList(path string) ([]UserCSV, error) {
 	return users, nil
 }
 
+// createUsersFromCSV creates users in Gitea from a list of GitHub users in CSV,
+// migrates their SSH keys, and logs the migration summary.
 func createUsersFromCSV(ctx context.Context, ghClient *gh.Client, gtClient *gt.Client, users []UserCSV, sourceID int64, logger *slog.Logger) {
 	for _, u := range users {
+		// Get user information from GitHub
 		ghUser, err := ghClient.GetUser(ctx, u.Login)
 		if err != nil {
 			logger.Error("failed to get github user", "login", u.Login, "error", err)
 			continue
 		}
 
+		// Create or get the user in Gitea
 		opt := gt.CreateUserOption{
 			SourceID:  sourceID,
 			LoginName: u.Login,
@@ -195,7 +200,94 @@ func createUsersFromCSV(ctx context.Context, ghClient *gh.Client, gtClient *gt.C
 			"role", u.Role,
 			"fullName", opt.FullName,
 		)
+
+		// Retrieve the user's SSH keys from GitHub
+		sshKeys, err := ghClient.ListUserKeys(ctx, u.Login)
+		if err != nil {
+			logger.Error("failed to get user ssh keys", "login", u.Login, "error", err)
+			continue
+		}
+
+		var (
+			successCount  int            // Number of successfully migrated keys
+			existCount    int            // Number of keys that already exist in Gitea
+			failedCount   int            // Number of failed key migrations
+			totalKeyCount = len(sshKeys) // Total number of keys to migrate
+		)
+
+		for index, key := range sshKeys {
+			keyTitle := key.GetTitle()
+			if keyTitle == "" {
+				keyTitle = fmt.Sprintf("Migrate key-%d from %s", index, u.Login)
+			}
+			// Attempt to create the SSH key in Gitea
+			_, err := gtClient.CreateUserPublicKey(
+				u.Login,
+				gt.CreatePublicKeyOption{
+					Title: keyTitle,
+					Key:   key.GetKey(),
+				})
+			if err != nil {
+				// Check if the key already exists in Gitea
+				if giteaErr, ok := err.(*gt.GiteaError); ok && giteaErr.Code == http.StatusUnprocessableEntity && giteaErr.Message != "" && (containsKeyUsedMsg(giteaErr.Message)) {
+					existCount++
+					logger.Info("ssh key already exists in gitea",
+						"login", u.Login,
+						"title", keyTitle,
+					)
+					continue
+				}
+				failedCount++
+				logger.Warn("failed to migrate ssh key",
+					"login", u.Login,
+					"title", keyTitle,
+					"error", err,
+				)
+				continue
+			}
+			successCount++
+			logger.Info("successfully migrated ssh key",
+				"login", u.Login,
+				"title", keyTitle,
+			)
+		}
+
+		// Log the migration summary for this user
+		logger.Info("ssh key migration summary",
+			"login", u.Login,
+			"total", totalKeyCount,
+			"success", successCount,
+			"exists", existCount,
+			"failed", failedCount,
+		)
 	}
+}
+
+/*
+containsKeyUsedMsg checks if the Gitea error message indicates that the SSH key already exists.
+*/
+func containsKeyUsedMsg(msg string) bool {
+	return (msg != "" && (contains(msg, "key content has been used") || contains(msg, "Key content has been used")))
+}
+
+/*
+contains checks if substr is present in s.
+This is a simple implementation to avoid importing the strings package.
+*/
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || (len(s) > len(substr) && (indexOf(s, substr) >= 0)))
+}
+
+/*
+indexOf returns the index of substr in s, or -1 if not found.
+*/
+func indexOf(s, substr string) int {
+	for i := 0; i+len(substr) <= len(s); i++ {
+		if s[i:i+len(substr)] == substr {
+			return i
+		}
+	}
+	return -1
 }
 
 func main() {
