@@ -19,16 +19,17 @@ type Config struct {
 	APITimeout   string
 	SourceOrg    string
 	TargetOrg    string
+	UserListFile string
 	Debug        bool
 	Version      bool
 }
 
 func (cfg *Config) IsVaild() error {
 	if cfg.GHToken == "" {
-		return errors.New("GHToken is required")
+		return errors.New("GitHub Token is required")
 	}
 	if cfg.GTToken == "" {
-		return errors.New("GTToken is required")
+		return errors.New("Gitea Token is required")
 	}
 	if cfg.SourceOrg == "" {
 		return errors.New("SourceOrg is required")
@@ -51,6 +52,7 @@ func LoadConfig() *Config {
 	apiTimeout := flag.String("timeout", "10m", "Timeout for requests")
 	sourceOrg := flag.String("source-org", "", "Source organization name")
 	targetOrg := flag.String("target-org", "", "Target organization name")
+	userListFile := flag.String("user-list", "", "Path to user list CSV file")
 	debug := flag.Bool("debug", false, "Enable debug logging")
 	version := flag.Bool("version", false, "Show version information")
 	flag.Parse()
@@ -66,6 +68,7 @@ func LoadConfig() *Config {
 		APITimeout:   convert.FromPtr(apiTimeout),
 		SourceOrg:    convert.FromPtr(sourceOrg),
 		TargetOrg:    convert.FromPtr(targetOrg),
+		UserListFile: convert.FromPtr(userListFile),
 		Debug:        convert.FromPtr(debug),
 		Version:      convert.FromPtr(version),
 	}

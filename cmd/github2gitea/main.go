@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"encoding/csv"
 	"fmt"
 	"log"
 	"log/slog"
+	"os"
 	"time"
 
 	"github.com/appleboy/github2gitea/pkg/config"
@@ -133,6 +135,69 @@ func migrateOrgAndRepos(ctx context.Context, cfg *config.Config, logger *slog.Lo
 	return nil
 }
 
+type UserCSV struct {
+	Login string
+	Email string
+	Role  string
+}
+
+func readUserList(path string) ([]UserCSV, error) {
+	if path == "" {
+		return nil, nil
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	r := csv.NewReader(f)
+	records, err := r.ReadAll()
+	if err != nil {
+		return nil, err
+	}
+	var users []UserCSV
+	for index, rec := range records {
+		// Skip header and invalid lines
+		if index == 0 || len(rec) < 5 {
+			continue
+		}
+		users = append(users, UserCSV{
+			Login: rec[2],
+			Email: rec[3],
+			Role:  rec[4],
+		})
+	}
+	return users, nil
+}
+
+func createUsersFromCSV(ctx context.Context, ghClient *gh.Client, gtClient *gt.Client, users []UserCSV, sourceID int64, logger *slog.Logger) {
+	for _, u := range users {
+		ghUser, err := ghClient.GetUser(ctx, u.Login)
+		if err != nil {
+			logger.Error("failed to get github user", "login", u.Login, "error", err)
+			continue
+		}
+
+		opt := gt.CreateUserOption{
+			SourceID:  sourceID,
+			LoginName: u.Login,
+			Username:  u.Login,
+			FullName:  convert.FromPtr(ghUser.Name),
+			Email:     u.Email,
+		}
+		_, err = gtClient.CreateOrGetUser(opt)
+		if err != nil {
+			logger.Error("failed to create user", "login", u.Login, "email", u.Email, "err", err)
+			continue
+		}
+		logger.Info("user created or exists",
+			"login", u.Login,
+			"role", u.Role,
+			"fullName", opt.FullName,
+		)
+	}
+}
+
 func main() {
 	cfg := config.LoadConfig()
 	logger := setupLogger(cfg.Debug)
@@ -161,6 +226,15 @@ func main() {
 	if err != nil {
 		logger.Error("failed to create clients", "error", err)
 		return
+	}
+
+	if cfg.UserListFile != "" {
+		users, err := readUserList(cfg.UserListFile)
+		if err != nil {
+			logger.Error("failed to read user list", "error", err)
+			return
+		}
+		createUsersFromCSV(ctx, ghClient, gtClient, users, cfg.GTSourceID, logger)
 	}
 
 	if err := migrateOrgAndRepos(ctx, cfg, logger, ghClient, gtClient); err != nil {
