@@ -26,16 +26,16 @@ type Config struct {
 
 func (cfg *Config) IsVaild() error {
 	if cfg.GHToken == "" {
-		return errors.New("GitHub Token is required")
+		return errors.New("github token is required")
 	}
 	if cfg.GTToken == "" {
-		return errors.New("Gitea Token is required")
+		return errors.New("gitea token is required")
 	}
 	if cfg.SourceOrg == "" {
-		return errors.New("SourceOrg is required")
+		return errors.New("sourceOrg is required")
 	}
 	if cfg.TargetOrg == "" {
-		return errors.New("TargetOrg is required")
+		return errors.New("targetOrg is required")
 	}
 	return nil
 }
