@@ -17,6 +17,7 @@
     - [命令列選項](#命令列選項)
     - [範例指令](#範例指令)
     - [遷移流程](#遷移流程)
+      - [使用者清單 CSV 格式](#使用者清單-csv-格式)
   - [貢獻方式](#貢獻方式)
   - [授權](#授權)
 
@@ -51,6 +52,7 @@ go build -o github2gitea cmd/github2gitea/main.go
 | `--source-org`     | GitHub 原始組織名稱          | -                   | 是   |
 | `--target-org`     | Gitea 目標組織名稱           | -                   | 是   |
 | `--debug`          | 啟用除錯日誌                 | `false`             | 否   |
+| `--user-list`      | 使用者清單 CSV 檔案路徑      | -                   | 否   |
 
 ### 範例指令
 
@@ -62,6 +64,17 @@ go build -o github2gitea cmd/github2gitea/main.go
   --gt-token your_gitea_token \
   --source-org github-org-name \
   --target-org gitea-org-name
+```
+
+帶入使用者清單 CSV 檔案的遷移範例：
+
+```bash
+./github2gitea \
+  --gh-token your_github_token \
+  --gt-token your_gitea_token \
+  --source-org github-org-name \
+  --target-org gitea-org-name \
+  --user-list users.csv
 ```
 
 企業 GitHub Server 遷移：
@@ -93,7 +106,29 @@ go build -o github2gitea cmd/github2gitea/main.go
    - 發行版本（Releases）
    - 標籤（Labels）
    - 里程碑（Milestones）
-5. 針對每個儲存庫處理錯誤，並持續遷移其他儲存庫
+5. 若有提供使用者清單 CSV 檔案，將：
+   - 批次建立 Gitea 使用者帳號
+   - 遷移使用者的 SSH 公鑰
+   - 保留使用者角色設定
+6. 針對每個儲存庫處理錯誤，並持續遷移其他儲存庫
+
+#### 使用者清單 CSV 格式
+
+CSV 檔案需有標頭列，且每列至少 5 個欄位，欄位順序如下：
+
+- **created_at**（第 1 欄，建立時間，可留空）
+- **id**（第 2 欄，使用者 id，可留空）
+- **login**（第 3 欄，GitHub 登入名稱）
+- **email**（第 4 欄，使用者 email）
+- **role**（第 5 欄，使用者角色）
+
+範例（含標頭）：
+
+```csv
+created_at,id,login,email,role
+,1,alice,alice@example.com,admin
+,2,bob,bob@example.com,user
+```
 
 ## 貢獻方式
 

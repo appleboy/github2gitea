@@ -17,6 +17,7 @@ A [CLI](https://en.wikipedia.org/wiki/Command-line_interface) tool to migrate [G
     - [Command-Line Options](#command-line-options)
     - [Example Commands](#example-commands)
     - [Migration Process](#migration-process)
+      - [User List CSV Format](#user-list-csv-format)
   - [Contributing](#contributing)
   - [License](#license)
 
@@ -51,6 +52,7 @@ go build -o github2gitea cmd/github2gitea/main.go
 | `--source-org`     | Source GitHub organization name  | -                   | Yes      |
 | `--target-org`     | Target Gitea organization name   | -                   | Yes      |
 | `--debug`          | Enable debug logging             | `false`             | No       |
+| `--user-list`      | Path to user list CSV file       | -                   | No       |
 
 ### Example Commands
 
@@ -62,6 +64,17 @@ Basic migration from GitHub to Gitea.com:
   --gt-token your_gitea_token \
   --source-org github-org-name \
   --target-org gitea-org-name
+```
+
+Migration with a user list CSV file:
+
+```bash
+./github2gitea \
+  --gh-token your_github_token \
+  --gt-token your_gitea_token \
+  --source-org github-org-name \
+  --target-org gitea-org-name \
+  --user-list users.csv
 ```
 
 Enterprise GitHub Server migration:
@@ -93,7 +106,29 @@ Enterprise GitHub Server migration:
    - Releases
    - Labels
    - Milestones
-5. Handles errors per-repository while continuing migration
+5. If a user list CSV file is provided:
+   - Batch creates Gitea user accounts
+   - Migrates users' SSH public keys
+   - Preserves user role assignments
+6. Handles errors per-repository while continuing migration
+
+#### User List CSV Format
+
+The CSV file should have a header row and at least 5 columns per row, with the following columns in order:
+
+- **created_at** (column 1, creation time, can be empty)
+- **id** (column 2, user id, can be empty)
+- **login** (column 3, GitHub login name)
+- **email** (column 4, user email)
+- **role** (column 5, user role)
+
+Example (with header):
+
+```csv
+created_at,id,login,email,role
+,1,alice,alice@example.com,admin
+,2,bob,bob@example.com,user
+```
 
 ## Contributing
 

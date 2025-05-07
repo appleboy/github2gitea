@@ -17,6 +17,7 @@
     - [命令行选项](#命令行选项)
     - [示例命令](#示例命令)
     - [迁移流程](#迁移流程)
+      - [用户清单 CSV 格式](#用户清单-csv-格式)
   - [贡献方式](#贡献方式)
   - [许可证](#许可证)
 
@@ -51,6 +52,7 @@ go build -o github2gitea cmd/github2gitea/main.go
 | `--source-org`     | GitHub 源组织名称            | -                   | 是   |
 | `--target-org`     | Gitea 目标组织名称           | -                   | 是   |
 | `--debug`          | 启用调试日志                 | `false`             | 否   |
+| `--user-list`      | 用户清单 CSV 文件路径        | -                   | 否   |
 
 ### 示例命令
 
@@ -62,6 +64,17 @@ go build -o github2gitea cmd/github2gitea/main.go
   --gt-token your_gitea_token \
   --source-org github-org-name \
   --target-org gitea-org-name
+```
+
+带用户清单 CSV 文件的迁移示例：
+
+```bash
+./github2gitea \
+  --gh-token your_github_token \
+  --gt-token your_gitea_token \
+  --source-org github-org-name \
+  --target-org gitea-org-name \
+  --user-list users.csv
 ```
 
 企业 GitHub Server 迁移：
@@ -93,7 +106,29 @@ go build -o github2gitea cmd/github2gitea/main.go
    - 发布（Releases）
    - 标签（Labels）
    - 里程碑（Milestones）
-5. 针对每个仓库处理错误，并继续迁移其他仓库
+5. 如果提供了用户清单 CSV 文件，将：
+   - 批量创建 Gitea 用户账号
+   - 迁移用户的 SSH 公钥
+   - 保留用户角色设置
+6. 针对每个仓库处理错误，并继续迁移其他仓库
+
+#### 用户清单 CSV 格式
+
+CSV 文件需有表头行，且每行至少 5 个字段，字段顺序如下：
+
+- **created_at**（第 1 列，创建时间，可为空）
+- **id**（第 2 列，用户 id，可为空）
+- **login**（第 3 列，GitHub 登录名）
+- **email**（第 4 列，用户邮箱）
+- **role**（第 5 列，用户角色）
+
+示例（含表头）：
+
+```csv
+created_at,id,login,email,role
+,1,alice,alice@example.com,admin
+,2,bob,bob@example.com,user
+```
 
 ## 贡献方式
 
