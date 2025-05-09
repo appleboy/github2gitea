@@ -375,3 +375,66 @@ func (g *Client) CreateUserPublicKey(username string, opts CreatePublicKeyOption
 	}
 	return key, nil
 }
+
+// DeleteOrgOption contains options for deleting a Gitea organization.
+type DeleteOrgOption struct {
+	// OrgName is the organization name to delete.
+	OrgName string
+}
+
+// DeleteOrg deletes an organization from Gitea.
+// Returns an error if the operation fails.
+func (g *Client) DeleteOrg(opts DeleteOrgOption) error {
+	if opts.OrgName == "" {
+		return errors.New("organization name is required")
+	}
+	resp, err := g.client.DeleteOrg(opts.OrgName)
+	if err != nil {
+		if resp != nil {
+			return &GiteaError{
+				Operation: "delete_org",
+				Code:      resp.StatusCode,
+				Message:   err.Error(),
+			}
+		}
+		return err
+	}
+	return nil
+}
+
+// DeleteRepoOption contains options for deleting a Gitea repository.
+type DeleteRepoOption struct {
+	// Owner is the owner (user or org) of the repository.
+	Owner string
+	// Repo is the name of the repository to delete.
+	Repo string
+}
+
+// DeleteRepository deletes a repository from Gitea.
+// Returns an error if the operation fails.
+func (g *Client) DeleteRepository(opts DeleteRepoOption) error {
+	if opts.Owner == "" || opts.Repo == "" {
+		return errors.New("owner and repo are required")
+	}
+	resp, err := g.client.DeleteRepo(opts.Owner, opts.Repo)
+	if err != nil {
+		if resp != nil {
+			return &GiteaError{
+				Operation: "delete_repository",
+				Code:      resp.StatusCode,
+				Message:   err.Error(),
+			}
+		}
+		return err
+	}
+	return nil
+}
+
+// ListOrgRepos lists all repositories under the specified organization.
+func (g *Client) ListOrgRepos(org string, opts ...gsdk.ListOrgReposOptions) ([]*gsdk.Repository, *gsdk.Response, error) {
+	var opt gsdk.ListOrgReposOptions
+	if len(opts) > 0 {
+		opt = opts[0]
+	}
+	return g.client.ListOrgRepos(org, opt)
+}

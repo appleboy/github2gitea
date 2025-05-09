@@ -320,6 +320,44 @@ func main() {
 		return
 	}
 
+	// If -rm-org is set, remove all repos under the org, then remove the org itself
+	if cfg.RmOrg {
+		logger.Info("rm-org flag detected, removing all repos and the org before migration", "org", cfg.TargetOrg)
+		// List all repos under the target org
+		repos, _, err := gtClient.ListOrgRepos(cfg.TargetOrg, gsdk.ListOrgReposOptions{
+			ListOptions: gsdk.ListOptions{
+				Page:     1,
+				PageSize: 100,
+			},
+		})
+		if err != nil {
+			logger.Error("failed to list org repos", "org", cfg.TargetOrg, "error", err)
+			return
+		}
+		for _, repo := range repos {
+			logger.Info("removing repo", "repo", repo.Name)
+			delErr := gtClient.DeleteRepository(gt.DeleteRepoOption{
+				Owner: cfg.TargetOrg,
+				Repo:  repo.Name,
+			})
+			if delErr != nil {
+				logger.Error("failed to delete repo", "repo", repo.Name, "error", delErr)
+				continue
+			}
+			logger.Info("repo deleted", "repo", repo.Name)
+		}
+		// Remove the org itself
+		logger.Info("removing org", "org", cfg.TargetOrg)
+		delOrgErr := gtClient.DeleteOrg(gt.DeleteOrgOption{
+			OrgName: cfg.TargetOrg,
+		})
+		if delOrgErr != nil {
+			logger.Error("failed to delete org", "org", cfg.TargetOrg, "error", delOrgErr)
+			return
+		}
+		logger.Info("org deleted", "org", cfg.TargetOrg)
+	}
+
 	if cfg.UserListFile != "" {
 		users, err := readUserList(cfg.UserListFile)
 		if err != nil {

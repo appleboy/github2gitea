@@ -22,6 +22,8 @@ type Config struct {
 	UserListFile string
 	Debug        bool
 	Version      bool
+	// RmOrg determines whether to remove the original org and all its repos before migration.
+	RmOrg bool
 }
 
 func (cfg *Config) IsVaild() error {
@@ -55,6 +57,7 @@ func LoadConfig() *Config {
 	userListFile := flag.String("user-list", "", "Path to user list CSV file")
 	debug := flag.Bool("debug", false, "Enable debug logging")
 	version := flag.Bool("version", false, "Show version information")
+	rmOrg := flag.Bool("rm-org", false, "Remove the original org and all its repos before migration")
 	flag.Parse()
 
 	return &Config{
@@ -71,5 +74,6 @@ func LoadConfig() *Config {
 		UserListFile: convert.FromPtr(userListFile),
 		Debug:        convert.FromPtr(debug),
 		Version:      convert.FromPtr(version),
+		RmOrg:        convert.FromPtr(rmOrg),
 	}
 }
