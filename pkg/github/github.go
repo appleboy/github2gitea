@@ -176,6 +176,16 @@ func (c *Client) ListOrgTeamsMembers(ctx context.Context, org string, slug strin
 	})
 }
 
+// ListTeamRepos lists all repositories a team has access to using paginatedFetch
+func (c *Client) ListTeamRepos(ctx context.Context, org string, slug string) ([]*github.Repository, error) {
+	return paginatedFetch(ctx, func(page int) ([]*github.Repository, *github.Response, error) {
+		return c.gh.Teams.ListTeamReposBySlug(ctx, org, slug, &github.ListOptions{
+			Page:    page,
+			PerPage: 100,
+		})
+	})
+}
+
 // ListOrgUsers lists all members in an organization using paginatedFetch
 func (c *Client) ListOrgUsers(ctx context.Context, org string) ([]*github.User, error) {
 	return paginatedFetch(ctx, func(page int) ([]*github.User, *github.Response, error) {
