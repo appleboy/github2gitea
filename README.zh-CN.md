@@ -4,6 +4,7 @@
 
 [![Lint and Testing](https://github.com/appleboy/github2gitea/actions/workflows/testing.yml/badge.svg)](https://github.com/appleboy/github2gitea/actions/workflows/testing.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/appleboy/github2gitea)](https://goreportcard.com/report/github.com/appleboy/github2gitea)
+[![codecov](https://codecov.io/gh/appleboy/github2gitea/branch/main/graph/badge.svg)](https://codecov.io/gh/appleboy/github2gitea)
 
 一个 [CLI](https://en.wikipedia.org/wiki/Command-line_interface) 工具，用于将 [GitHub](https://github.com/) 的仓库（无论是组织还是个人账号）迁移到 [Gitea](https://about.gitea.com/) 平台，使用 [Golang](https://go.dev/) 开发。本项目利用 [GitHub](https://github.com/) 及 [Gitea](https://pkg.go.dev/code.gitea.io/sdk/gitea) SDK，实现无缝的仓库迁移。
 

@@ -4,6 +4,7 @@
 
 [![Lint and Testing](https://github.com/appleboy/github2gitea/actions/workflows/testing.yml/badge.svg)](https://github.com/appleboy/github2gitea/actions/workflows/testing.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/appleboy/github2gitea)](https://goreportcard.com/report/github.com/appleboy/github2gitea)
+[![codecov](https://codecov.io/gh/appleboy/github2gitea/branch/main/graph/badge.svg)](https://codecov.io/gh/appleboy/github2gitea)
 
 一個 [CLI](https://en.wikipedia.org/wiki/Command-line_interface) 工具，用於將 [GitHub](https://github.com/) 的儲存庫（無論是組織或個人帳號）遷移到 [Gitea](https://about.gitea.com/) 平台，使用 [Golang](https://go.dev/) 開發。本專案利用 [GitHub](https://github.com/) 及 [Gitea](https://pkg.go.dev/code.gitea.io/sdk/gitea) SDK，實現無縫的儲存庫轉移。
 
