@@ -342,6 +342,15 @@ func (g *Client) CreateOrGetTeam(org string, opts CreateTeamOption) (*gsdk.Team,
 	return team, nil
 }
 
+// SearchOrgTeams retrieves a list of teams in the specified organization.
+func (g *Client) SearchOrgTeams(org string, opts *gsdk.SearchTeamsOptions) ([]*gsdk.Team, error) {
+	teams, _, err := g.client.SearchOrgTeams(org, opts)
+	if err != nil {
+		return nil, err
+	}
+	return teams, nil
+}
+
 // AddTeamMember adds a user to the specified team by team ID.
 // Returns an error if the operation fails.
 func (g *Client) AddTeamMember(id int64, user string) error {

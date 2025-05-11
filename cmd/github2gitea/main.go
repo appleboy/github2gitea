@@ -100,7 +100,8 @@ func migrateOrgAndRepos(ctx context.Context, cfg *config.Config, logger *slog.Lo
 
 	// create new gitea organization
 	_, err = m.CreateNewOrg(ctx, migrate.CreateNewOrgOption{
-		Name:        cfg.TargetOrg,
+		OldName:     cfg.SourceOrg,
+		NewName:     cfg.TargetOrg,
 		Description: convert.FromPtr(ghOrg.Description),
 		Public:      false,
 		SourceID:    cfg.GTSourceID,

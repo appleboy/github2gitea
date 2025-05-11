@@ -28,25 +28,32 @@ func New(ghClient *github.Client, gtClient *gitea.Client, logger *slog.Logger) *
 
 // CreateNewOrgOption create new organization option
 type CreateNewOrgOption struct {
-	Name        string
+	OldName     string
+	NewName     string
 	Description string
 	Public      bool
 	Permission  map[string][]string
 	SourceID    int64
 }
 
+// CreateNewOrgResult create new organization result
+type CreateNewOrgResult struct {
+	Org    *gsdk.Organization
+	Admins []*gsdk.User
+}
+
 // CreateNewOrg create new organization
 var invalidCharsRegex = regexp.MustCompile(`[^a-zA-Z0-9\-_\.]`)
 
-func (m *migrate) CreateNewOrg(ctx context.Context, opts CreateNewOrgOption) (*gsdk.Organization, error) {
+func (m *migrate) CreateNewOrg(ctx context.Context, opts CreateNewOrgOption) (*CreateNewOrgResult, error) {
 	visibility := gsdk.VisibleTypePrivate
 	if opts.Public {
 		visibility = gsdk.VisibleTypePublic
 	}
 
-	m.logger.Info("start create organization", "name", opts.Name)
+	m.logger.Info("start create organization", "name", opts.NewName)
 	org, err := m.gtClient.CreateAndGetOrg(gitea.CreateOrgOption{
-		Name:        opts.Name,
+		Name:        opts.NewName,
 		Description: opts.Description,
 		Visibility:  visibility,
 	})
@@ -54,11 +61,18 @@ func (m *migrate) CreateNewOrg(ctx context.Context, opts CreateNewOrgOption) (*g
 		return nil, err
 	}
 
+	owners, err := m.gtClient.SearchOrgTeams(org.UserName, &gsdk.SearchTeamsOptions{
+		Query: "owners",
+	})
+	ownerTeam := owners[0]
+
 	// get github organization members
-	ghUsers, err := m.ghClient.ListOrgUsers(ctx, opts.Name)
+	ghUsers, err := m.ghClient.ListOrgUsers(ctx, opts.OldName)
 	if err != nil {
 		return nil, err
 	}
+
+	admins := make([]*gsdk.User, 0)
 	// create gitea organization members
 	for _, ghUser := range ghUsers {
 		// get github user
@@ -89,8 +103,17 @@ func (m *migrate) CreateNewOrg(ctx context.Context, opts CreateNewOrgOption) (*g
 			continue
 		}
 
-		// get github user permission from org
-		_, err = m.ghClient.GetUserPermissionFromOrg(ctx, opts.Name, gtUser.LoginName)
+		// Role identifies the user's role within the organization or team.
+		// Possible values for organization membership:
+		//     member - non-owner organization member
+		//     admin - organization owner
+		//
+		// Possible values for team membership are:
+		//     member - a normal member of the team
+		//     maintainer - a team maintainer. Able to add/remove other team
+		//                  members, promote other team members to team
+		//                  maintainer, and edit the team’s name and description
+		role, err := m.ghClient.GetUserPermissionFromOrg(ctx, opts.OldName, gtUser.LoginName)
 		if err != nil {
 			m.logger.Error(
 				"failed to get github user permission",
@@ -99,10 +122,24 @@ func (m *migrate) CreateNewOrg(ctx context.Context, opts CreateNewOrgOption) (*g
 			)
 			continue
 		}
+
+		if role == "admin" {
+			admins = append(admins, gtUser)
+			err := m.gtClient.AddTeamMember(ownerTeam.ID, gtUser.UserName)
+			if err != nil {
+				m.logger.Error(
+					"failed to add gitea team member (admin)",
+					"name", ownerTeam.Name,
+					"user", gtUser.UserName,
+					"error", err,
+				)
+				continue
+			}
+		}
 	}
 
 	// get github organization teams
-	ghTeams, err := m.ghClient.ListOrgTeams(ctx, opts.Name)
+	ghTeams, err := m.ghClient.ListOrgTeams(ctx, opts.OldName)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +147,7 @@ func (m *migrate) CreateNewOrg(ctx context.Context, opts CreateNewOrgOption) (*g
 	for _, ghTeam := range ghTeams {
 		// Sanitize the team name
 		sanitizedTeamName := invalidCharsRegex.ReplaceAllString(convert.FromPtr(ghTeam.Name), "_")
-		team, err := m.gtClient.CreateOrGetTeam(opts.Name, gitea.CreateTeamOption{
+		team, err := m.gtClient.CreateOrGetTeam(opts.NewName, gitea.CreateTeamOption{
 			Name:        sanitizedTeamName,
 			Description: convert.FromPtr(ghTeam.Description),
 			Permission:  convert.FromPtr(ghTeam.Permission),
@@ -125,7 +162,7 @@ func (m *migrate) CreateNewOrg(ctx context.Context, opts CreateNewOrgOption) (*g
 		}
 
 		// get github team members
-		ghUsers, err := m.ghClient.ListOrgTeamsMembers(ctx, opts.Name, *ghTeam.Slug)
+		ghUsers, err := m.ghClient.ListOrgTeamsMembers(ctx, opts.OldName, *ghTeam.Slug)
 		if err != nil {
 			m.logger.Error(
 				"failed to get github team members",
@@ -149,7 +186,13 @@ func (m *migrate) CreateNewOrg(ctx context.Context, opts CreateNewOrgOption) (*g
 			}
 		}
 	}
-	return org, nil
+
+	resp := &CreateNewOrgResult{
+		Org:    org,
+		Admins: admins,
+	}
+
+	return resp, nil
 }
 
 // MigrateNewRepoOption migrate repository option
