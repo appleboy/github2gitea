@@ -121,7 +121,7 @@ func migrateOrgAndRepos(ctx context.Context, cfg *config.Config, logger *slog.Lo
 	for _, repo := range ghRepos {
 		// create new gitea repository
 		err = m.MigrateNewRepo(ctx, migrate.MigrateNewRepoOption{
-			Owner:        convert.FromPtr(repo.Owner.Login),
+			Owner:        cfg.TargetOrg,
 			Name:         convert.FromPtr(repo.Name),
 			CloneAddr:    convert.FromPtr(repo.CloneURL),
 			Description:  convert.FromPtr(repo.Description),

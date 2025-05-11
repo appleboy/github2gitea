@@ -315,10 +315,11 @@ func (g *Client) CreateOrGetTeam(org string, opts CreateTeamOption) (*gsdk.Team,
 	case core.GitHubTeamPush:
 		opt.Permission = gsdk.AccessModeWrite
 	case core.GitHubTeamPull:
-		opt.Permission = gsdk.AccessModeRead
+		opt.Permission = gsdk.AccessModeWrite
 	case core.GitHubTeamMaintain:
 		opt.Permission = gsdk.AccessModeWrite
-	case core.GitHubTeamTriager: // not supported
+	case core.GitHubTeamTriager:
+		opt.Permission = gsdk.AccessModeRead
 	default:
 		return nil, errors.New("permission mode invalid")
 	}

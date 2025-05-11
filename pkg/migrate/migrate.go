@@ -161,6 +161,12 @@ func (m *migrate) CreateNewOrg(ctx context.Context, opts CreateNewOrgOption) (*C
 			continue
 		}
 
+		m.logger.Info("create gitea team",
+			"org", team.Organization.UserName,
+			"name", team.Name,
+			"permission", team.Permission,
+		)
+
 		// get github team members
 		ghUsers, err := m.ghClient.ListOrgTeamsMembers(ctx, opts.OldName, *ghTeam.Slug)
 		if err != nil {
