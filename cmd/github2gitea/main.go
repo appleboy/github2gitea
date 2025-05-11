@@ -99,7 +99,7 @@ func migrateOrgAndRepos(ctx context.Context, cfg *config.Config, logger *slog.Lo
 	)
 
 	// create new gitea organization
-	_, err = m.CreateNewOrg(ctx, migrate.CreateNewOrgOption{
+	org, err := m.CreateNewOrg(ctx, migrate.CreateNewOrgOption{
 		OldName:     cfg.SourceOrg,
 		NewName:     cfg.TargetOrg,
 		Description: convert.FromPtr(ghOrg.Description),
@@ -131,6 +131,26 @@ func migrateOrgAndRepos(ctx context.Context, cfg *config.Config, logger *slog.Lo
 		})
 		if err != nil {
 			logger.Error("migration repository error", "error", err)
+		}
+
+		if teams, ok := org.RepoTeams[convert.FromPtr(repo.Name)]; ok {
+			for _, team := range teams {
+				// Add the team to the repository
+				err = gtClient.AddTeamRepository(
+					team.ID,
+					cfg.TargetOrg,
+					convert.FromPtr(repo.Name),
+				)
+				if err != nil {
+					logger.Error("failed to add team to repo", "error", err)
+					continue
+				}
+				logger.Info("added team to repo",
+					"org", cfg.TargetOrg,
+					"repo", convert.FromPtr(repo.Name),
+					"team", team.Name,
+				)
+			}
 		}
 	}
 

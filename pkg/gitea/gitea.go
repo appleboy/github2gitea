@@ -359,6 +359,13 @@ func (g *Client) AddTeamMember(id int64, user string) error {
 	return err
 }
 
+// AddTeamRepository adds a repository to the specified team.
+// Returns an error if the operation fails.
+func (g *Client) AddTeamRepository(id int64, org, repo string) error {
+	_, err := g.client.AddTeamRepository(id, org, repo)
+	return err
+}
+
 // CreatePublicKeyOption contains options for creating a user's SSH key.
 type CreatePublicKeyOption struct {
 	Title string

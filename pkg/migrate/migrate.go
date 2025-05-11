@@ -38,8 +38,9 @@ type CreateNewOrgOption struct {
 
 // CreateNewOrgResult create new organization result
 type CreateNewOrgResult struct {
-	Org    *gsdk.Organization
-	Admins []*gsdk.User
+	Org       *gsdk.Organization
+	Admins    []*gsdk.User
+	RepoTeams map[string][]*gsdk.Team
 }
 
 // CreateNewOrg create new organization
@@ -138,6 +139,7 @@ func (m *migrate) CreateNewOrg(ctx context.Context, opts CreateNewOrgOption) (*C
 		}
 	}
 
+	repoTeams := make(map[string][]*gsdk.Team)
 	// get github organization teams
 	ghTeams, err := m.ghClient.ListOrgTeams(ctx, opts.OldName)
 	if err != nil {
@@ -145,6 +147,18 @@ func (m *migrate) CreateNewOrg(ctx context.Context, opts CreateNewOrgOption) (*C
 	}
 	// create gitea organization teams
 	for _, ghTeam := range ghTeams {
+
+		// get github team repositories
+		ghRepos, err := m.ghClient.ListTeamReposBySlug(ctx, opts.OldName, *ghTeam.Slug)
+		if err != nil {
+			m.logger.Error(
+				"failed to get github team repositories",
+				"name", convert.FromPtr(ghTeam.Name),
+				"error", err,
+			)
+			continue
+		}
+
 		// Sanitize the team name
 		sanitizedTeamName := invalidCharsRegex.ReplaceAllString(convert.FromPtr(ghTeam.Name), "_")
 		team, err := m.gtClient.CreateOrGetTeam(opts.NewName, gitea.CreateTeamOption{
@@ -159,6 +173,10 @@ func (m *migrate) CreateNewOrg(ctx context.Context, opts CreateNewOrgOption) (*C
 				"error", err,
 			)
 			continue
+		}
+
+		for _, ghRepo := range ghRepos {
+			repoTeams[convert.FromPtr(ghRepo.Name)] = append(repoTeams[convert.FromPtr(ghRepo.Name)], team)
 		}
 
 		m.logger.Info("create gitea team",
@@ -194,8 +212,9 @@ func (m *migrate) CreateNewOrg(ctx context.Context, opts CreateNewOrgOption) (*C
 	}
 
 	resp := &CreateNewOrgResult{
-		Org:    org,
-		Admins: admins,
+		Org:       org,
+		Admins:    admins,
+		RepoTeams: repoTeams,
 	}
 
 	return resp, nil
@@ -230,45 +249,6 @@ func (m *migrate) MigrateNewRepo(ctx context.Context, opts MigrateNewRepoOption)
 	})
 	if err != nil {
 		return err
-	}
-
-	// List collaborators
-	ghUsers, err := m.ghClient.ListRepoCollaborators(ctx, opts.Owner, opts.Name)
-	if err != nil {
-		return err
-	}
-
-	for _, ghUser := range ghUsers {
-		if *ghUser.Type != "User" {
-			m.logger.Info(
-				"skip github user type",
-				"name", convert.FromPtr(ghUser.Login),
-				"type", convert.FromPtr(ghUser.Type),
-			)
-			continue
-		}
-
-		// get github user
-		ghUser, err := m.ghClient.GetUser(ctx, convert.FromPtr(ghUser.Login))
-		if err != nil {
-			m.logger.Error(
-				"failed to get github user",
-				"name", convert.FromPtr(ghUser.Login),
-				"error", err,
-			)
-			continue
-		}
-
-		// add gitea collaborator
-		_, err = m.gtClient.AddCollaborator(opts.Owner, opts.Name, *ghUser.Login, ghUser.Permissions)
-		if err != nil {
-			m.logger.Error(
-				"failed to add gitea repo collaborator",
-				"name", convert.FromPtr(ghUser.Login),
-				"error", err,
-			)
-			continue
-		}
 	}
 
 	m.logger.Info("migrate repo success",

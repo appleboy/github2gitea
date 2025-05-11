@@ -100,21 +100,6 @@ func (c *Client) GetUserPermissionFromOrg(ctx context.Context, org, username str
 }
 
 /*
-ListRepoUsers lists all users with access to a repository.
-This is now implemented using paginatedFetch.
-*/
-func (c *Client) ListRepoUsers(ctx context.Context, owner, repo string) ([]*github.User, error) {
-	return paginatedFetch(ctx, func(page int) ([]*github.User, *github.Response, error) {
-		return c.gh.Repositories.ListCollaborators(ctx, owner, repo, &github.ListCollaboratorsOptions{
-			ListOptions: github.ListOptions{
-				Page:    page,
-				PerPage: 100,
-			},
-		})
-	})
-}
-
-/*
 ListRepoCollaborators lists all collaborators in a repository.
 This is now implemented using paginatedFetch.
 */
@@ -176,8 +161,8 @@ func (c *Client) ListOrgTeamsMembers(ctx context.Context, org string, slug strin
 	})
 }
 
-// ListTeamRepos lists all repositories a team has access to using paginatedFetch
-func (c *Client) ListTeamRepos(ctx context.Context, org string, slug string) ([]*github.Repository, error) {
+// ListTeamReposBySlug lists all repositories a team has access to using team slug and paginatedFetch
+func (c *Client) ListTeamReposBySlug(ctx context.Context, org string, slug string) ([]*github.Repository, error) {
 	return paginatedFetch(ctx, func(page int) ([]*github.Repository, *github.Response, error) {
 		return c.gh.Teams.ListTeamReposBySlug(ctx, org, slug, &github.ListOptions{
 			Page:    page,
