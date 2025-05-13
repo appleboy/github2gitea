@@ -65,6 +65,9 @@ func (m *migrate) CreateNewOrg(ctx context.Context, opts CreateNewOrgOption) (*C
 	owners, err := m.gtClient.SearchOrgTeams(org.UserName, &gsdk.SearchTeamsOptions{
 		Query: "owners",
 	})
+	if err != nil {
+		return nil, err
+	}
 	ownerTeam := owners[0]
 
 	// get github organization members
@@ -147,7 +150,6 @@ func (m *migrate) CreateNewOrg(ctx context.Context, opts CreateNewOrgOption) (*C
 	}
 	// create gitea organization teams
 	for _, ghTeam := range ghTeams {
-
 		// get github team repositories
 		ghRepos, err := m.ghClient.ListTeamReposBySlug(ctx, opts.OldName, *ghTeam.Slug)
 		if err != nil {
