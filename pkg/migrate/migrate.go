@@ -180,7 +180,7 @@ func (m *migrate) CreateNewOrg(ctx context.Context, opts CreateNewOrgOption) (*C
 		}
 
 		m.logger.Info("create gitea team",
-			"org", team.Organization.UserName,
+			"org", opts.NewName,
 			"name", team.Name,
 			"permission", team.Permission,
 		)
