@@ -4,7 +4,7 @@ go 1.24
 
 require (
 	code.gitea.io/sdk/gitea v0.21.0
-	github.com/appleboy/com v0.3.0
+	github.com/appleboy/com v0.4.0
 	github.com/google/go-github/v71 v71.0.0
 )
 
