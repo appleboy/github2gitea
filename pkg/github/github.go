@@ -22,6 +22,7 @@ type Config struct {
 type Client struct {
 	logger *slog.Logger
 	gh     *github.Client
+	token  string
 }
 
 // NewClient creates a new GitHub Client
@@ -60,6 +61,7 @@ func NewClient(cfg *Config) (*Client, error) {
 	return &Client{
 		gh:     ghClient,
 		logger: cfg.Logger,
+		token:  cfg.Token,
 	}, nil
 }
 
@@ -205,6 +207,48 @@ func (c *Client) GetRepo(ctx context.Context, owner, repo string) (*github.Repos
 func (c *Client) GetOrg(ctx context.Context, org string) (*github.Organization, error) {
 	organization, _, err := c.gh.Organizations.Get(ctx, org)
 	return organization, err
+}
+
+/*
+ListOrgActionsVariables lists all GitHub Actions variables at the organization level.
+*/
+func (c *Client) ListOrgActionsVariables(ctx context.Context, org string) ([]*github.ActionsVariable, error) {
+	var allVars []*github.ActionsVariable
+	page := 1
+	for {
+		resp, _, err := c.gh.Actions.ListOrgVariables(ctx, org, &github.ListOptions{
+			Page:    page,
+			PerPage: 100,
+		})
+		if err != nil {
+			return nil, err
+		}
+		allVars = append(allVars, resp.Variables...)
+		// The API does not support pagination for variables, so break after first page.
+		break
+	}
+	return allVars, nil
+}
+
+/*
+ListRepoActionsVariables lists all GitHub Actions variables at the repository level.
+*/
+func (c *Client) ListRepoActionsVariables(ctx context.Context, owner, repo string) ([]*github.ActionsVariable, error) {
+	var allVars []*github.ActionsVariable
+	page := 1
+	for {
+		resp, _, err := c.gh.Actions.ListRepoVariables(ctx, owner, repo, &github.ListOptions{
+			Page:    page,
+			PerPage: 100,
+		})
+		if err != nil {
+			return nil, err
+		}
+		allVars = append(allVars, resp.Variables...)
+		// The API does not support pagination for variables, so break after first page.
+		break
+	}
+	return allVars, nil
 }
 
 // ListUserKeys lists all public keys for a user using paginatedFetch
