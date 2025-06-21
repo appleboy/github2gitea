@@ -213,42 +213,32 @@ func (c *Client) GetOrg(ctx context.Context, org string) (*github.Organization, 
 ListOrgActionsVariables lists all GitHub Actions variables at the organization level.
 */
 func (c *Client) ListOrgActionsVariables(ctx context.Context, org string) ([]*github.ActionsVariable, error) {
-	var allVars []*github.ActionsVariable
-	page := 1
-	for {
-		resp, _, err := c.gh.Actions.ListOrgVariables(ctx, org, &github.ListOptions{
+	return paginatedFetch(ctx, func(page int) ([]*github.ActionsVariable, *github.Response, error) {
+		resp, respObj, err := c.gh.Actions.ListOrgVariables(ctx, org, &github.ListOptions{
 			Page:    page,
 			PerPage: 100,
 		})
 		if err != nil {
-			return nil, err
+			return nil, respObj, err
 		}
-		allVars = append(allVars, resp.Variables...)
-		// The API does not support pagination for variables, so break after first page.
-		break
-	}
-	return allVars, nil
+		return resp.Variables, respObj, nil
+	})
 }
 
 /*
 ListRepoActionsVariables lists all GitHub Actions variables at the repository level.
 */
 func (c *Client) ListRepoActionsVariables(ctx context.Context, owner, repo string) ([]*github.ActionsVariable, error) {
-	var allVars []*github.ActionsVariable
-	page := 1
-	for {
-		resp, _, err := c.gh.Actions.ListRepoVariables(ctx, owner, repo, &github.ListOptions{
+	return paginatedFetch(ctx, func(page int) ([]*github.ActionsVariable, *github.Response, error) {
+		resp, respObj, err := c.gh.Actions.ListRepoVariables(ctx, owner, repo, &github.ListOptions{
 			Page:    page,
 			PerPage: 100,
 		})
 		if err != nil {
-			return nil, err
+			return nil, respObj, err
 		}
-		allVars = append(allVars, resp.Variables...)
-		// The API does not support pagination for variables, so break after first page.
-		break
-	}
-	return allVars, nil
+		return resp.Variables, respObj, nil
+	})
 }
 
 // ListUserKeys lists all public keys for a user using paginatedFetch
