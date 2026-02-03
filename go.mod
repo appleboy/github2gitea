@@ -3,7 +3,7 @@ module github.com/appleboy/github2gitea
 go 1.24.0
 
 require (
-	code.gitea.io/sdk/gitea v0.22.1
+	code.gitea.io/sdk/gitea v0.23.2
 	github.com/appleboy/com v1.1.0
 	github.com/google/go-github/v71 v71.0.0
 )
